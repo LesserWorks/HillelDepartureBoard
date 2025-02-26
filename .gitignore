@@ -1,5 +1,6 @@
 .DS_Store
 DepartureBoard.html
 mdotmta_gtfs_marc/
+__pycache__
 *.zip
 *.key
