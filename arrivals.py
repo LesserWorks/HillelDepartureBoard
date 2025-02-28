@@ -194,7 +194,7 @@ def main(args):
         marc_info = parse_marc_gtfs(marc_path)
         marc_sched = get_marc_schedule(marc_info, args.marc_code)
         metro_key = decrypt_metro_api()
-    except:
+    except Exception as e:
         print(f"{type(e).__name__}: {e}")
 
     while not exit_event.is_set():
