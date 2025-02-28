@@ -195,7 +195,7 @@ def main(args):
         marc_sched = get_marc_schedule(marc_info, args.marc_code)
         metro_key = decrypt_metro_api()
     except:
-        pass
+        print(f"{type(e).__name__}: {e}")
 
     while not exit_event.is_set():
         try:
@@ -213,7 +213,7 @@ def main(args):
             else:
                 return
         except Exception as e:
-            print(e)
+            print(f"{type(e).__name__}: {e}")
 
 if __name__ == "__main__":
     signal.signal(signal.SIGTERM, exit_handler)
