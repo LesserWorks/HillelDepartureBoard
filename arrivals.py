@@ -78,7 +78,7 @@ def download_unpack_zip(url):
     temp_path.unlink()
 
 def decrypt_metro_api():
-    subprocess.run(['openssl', 'enc', '-aes-256-cbc', '-d', '-pbkdf2', '-in', 'metro_api.enc', '-out', 'metro_api.key', '-pass', 'file:file_key.key'])
+    subprocess.run(['openssl', 'enc', '-aes-256-cbc', '-d', '-pbkdf2', '-in', 'metro_api.enc', '-out', 'metro_api.key', '-pass', 'file:file_key.key'], check=True)
     with open('metro_api.key', 'r') as infile:
         key = infile.readline().rstrip()
     return key
@@ -167,10 +167,10 @@ def get_metro_realtime(code, rows, key):
         if allocated_rows <= 0:
             break
         times_str = [x[0] for x in val]
-        rows.append(f'<div class="service-name"><img src="images/WMATA_Metro_logo.svg" class="metro-logo"><div class="metro-bullet {val[0][1]}">{val[0][1]}</div>{key}</div><div class="times">{str(times_str[:2])[1:-1]}</div>')
+        rows.append(f'<div class="service-name"><img src="images/WMATA_Metro_Logo.svg" class="metro-logo"><div class="metro-bullet {val[0][1]}">{val[0][1]}</div>{key}</div><div class="times">{str(times_str[:2])[1:-1]}</div>')
         allocated_rows -= 1
     for _ in range(allocated_rows, 0, -1):
-        rows.append(f'<div class="service-name"><img src="images/WMATA_Metro_logo.svg" class="metro-logo"></div>')
+        rows.append(f'<div class="service-name"><img src="images/WMATA_Metro_Logo.svg" class="metro-logo"></div>')
 
 def add_purple_line(rows):
     rows.append(f'<div class="service-name"></div>')
@@ -187,15 +187,18 @@ def write_rows(rows):
 def main(args):
     marc_path = './mdotmta_gtfs_marc'
     try:
-        marc_static_gtfs_url  = 'https://feeds.mta.maryland.gov/gtfs/marc'
-        marc_gtfs_modified = get_file_last_modifed(marc_static_gtfs_url)
-        if not Path(marc_path).exists() or Path(marc_path).stat().st_mtime < marc_gtfs_modified:
-            download_unpack_zip(marc_static_gtfs_url)
-        marc_info = parse_marc_gtfs(marc_path)
-        marc_sched = get_marc_schedule(marc_info, args.marc_code)
-        metro_key = decrypt_metro_api()
+        if args.marc_code is not None:
+            marc_static_gtfs_url  = 'https://feeds.mta.maryland.gov/gtfs/marc'
+            marc_gtfs_modified = get_file_last_modifed(marc_static_gtfs_url)
+            if not Path(marc_path).exists() or Path(marc_path).stat().st_mtime < marc_gtfs_modified:
+                download_unpack_zip(marc_static_gtfs_url)
+            marc_info = parse_marc_gtfs(marc_path)
+            marc_sched = get_marc_schedule(marc_info, args.marc_code)
+        if args.metro_code is not None:
+            metro_key = decrypt_metro_api()
     except Exception as e:
         print(f"{type(e).__name__}: {e}")
+        return
 
     while not exit_event.is_set():
         try:
