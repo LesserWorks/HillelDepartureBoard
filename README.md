@@ -7,7 +7,7 @@ Currently just displays all MARC trains running at the time. Run as follows:
 
 Notes for next steps:
 - [x] Metro permanent API key
-- [ ] Parse MARC schedule and combine with MARC realtime
+- [x] Parse MARC schedule and combine with MARC realtime
 - [x] Python write to HTML
 - [ ] Python virtual environment
 - [x] Find library (selenium?) for python to open a page in the browser, and refresh the page

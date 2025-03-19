@@ -2,7 +2,7 @@
 
 from google.transit import gtfs_realtime_pb2
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, time
 from threading import Event
 import shutil
 import signal
@@ -11,7 +11,7 @@ import webbrowser
 import requests
 import argparse
 import csv
-import time
+import copy
 import bisect
 
 """
@@ -34,7 +34,7 @@ Upon screen update:
 1. Make copy of master schedule
 2. Get snippet of array that has arrival times in the next 99 mins
 3. Filter array based on service_id into calendar_dates and calendar
-4. Filter array to remove trip_ids that realtime has entries for
+4. Filter array to remove trip_ids that realtime has entries for and ones in past
 5. Append to realtime array
 
 """
@@ -45,7 +45,7 @@ new_carrollton_nb_id = 11989
 new_carrollton_sb_id = 11988
 penn_nd_id = 12002
 penn_sb_id = 11980
-marc_name_map = {11958: "Washington", 12006: "Baltimore Camden", 12008: "Dorsey", 12025: "Dorsey", 11980: "Baltimore Penn", 12002: "Baltimore Penn"}
+marc_name_map = {'11958': "Washington", '12006': "Baltimore Camden", '12008': "Dorsey", '12025': "Dorsey", '11980': "Baltimore Penn", '12002': "Baltimore Penn"}
 
 schedule_relationship = ['scheduled', 'added', 'unscheduled', 'canceled', 'null', 'replacement', 'duplicated', 'deleted']
 
@@ -55,14 +55,34 @@ def exit_handler(signal, frame):
 
 def get_marc_schedule(marc_info, marc_code):
     staton_pair = marc_code.split('-')
-    marc_sched = {staton_pair[0]: [], staton_pair[1]: []}
+    marc_sched = {}
     for trip_id, info_list in marc_info['stop_times'].items():
         service_id = marc_info['trips'][trip_id]['service_id']
         for info in info_list:
             if info['stop_id'] in staton_pair:
-                bisect.insort_right(marc_sched[info['stop_id']], {'arrival_time': info['arrival_time'], 'trip_id': trip_id, 'service_id': service_id}, key=(lambda x: x['arrival_time']))
-                break
+                last_stop = info_list[-1]['stop_id']
+                if last_stop in marc_sched:
+                    bisect.insort_right(marc_sched[last_stop], {'arrival_time': info['arrival_time'], 'trip_id': trip_id, 'service_id': service_id, 'realtime': False}, key=(lambda x: x['arrival_time']))
+                else:
+                    marc_sched[last_stop] = [{'arrival_time': info['arrival_time'], 'trip_id': trip_id, 'service_id': service_id, 'realtime': False}]
+                break # to next trip_id
     return marc_sched
+
+def service_is_running(marc_info, service_id, dt):
+    str_dt = dt.strftime('%Y%m%d')
+    if service_id in marc_info['calendar_dates']:
+        for entry in marc_info['calendar_dates'][service_id]:
+            # if found in calendar_dates, overrides other info
+            if entry['date'] == str_dt:
+                return entry['exception_type'] == '1'
+    # if date wasn't in this service_id's calendar dates, check regular calendar list
+    return bool(int(marc_info['calendar'][service_id][dt.weekday()]))
+
+def get_marcs_for_day(marc_info, marc_sched, dt):
+    ret = {}
+    for last_stop, sched in marc_sched.items():
+        ret[last_stop] = [{'arrival_time': datetime.combine(dt, time.fromisoformat(x['arrival_time'])), 'trip_id': x['trip_id'], 'service_id': x['service_id'], 'realtime': x['realtime']} for x in sched if service_is_running(marc_info, x['service_id'], dt)]
+    return ret
 
 def get_file_last_modifed(url):
     resp = requests.head(url, allow_redirects=True)
@@ -88,11 +108,17 @@ def parse_marc_gtfs(folder_path):
     for file in Path(folder_path).iterdir():
         marc_info[file.stem] = {}
         # key is unique in these files
-        if file.stem in {'calendar', 'routes', 'stops', 'trips'}:
+        if file.stem in {'routes', 'stops', 'trips'}:
             with open(file) as infile:
                 reader = csv.DictReader(infile)
                 for row in reader:
                     marc_info[file.stem][list(row.values())[0]] = row
+        # just get the list of days
+        elif file.stem == 'calendar':
+            with open(file) as infile:
+                reader = csv.reader(infile)
+                for row in reader:
+                    marc_info[file.stem][row[0]] = row[1:8]
         # key is repeated in these files
         elif file.stem in {'calendar_dates', 'stop_times'}:
             with open(file) as infile:
@@ -105,43 +131,59 @@ def parse_marc_gtfs(folder_path):
                         marc_info[file.stem][key] = []
     return marc_info
 
-def get_marc_realtime(marc_code, rows, marc_info):
+def get_marc_realtime(marc_code, rows, marc_info, today_sched):
     station_pair = marc_code.split('-')
+    sched = copy.deepcopy(today_sched)
+    dt = datetime.today()
     feed = gtfs_realtime_pb2.FeedMessage()
     response = requests.get('https://mdotmta-gtfs-rt.s3.amazonaws.com/MARC+RT/marc-tu.pb')
     feed.ParseFromString(response.content)
-    by_dest = {}
     for entity in feed.entity:
         if entity.HasField('trip_update'):
             trip_update = entity.trip_update
             trip_desc = trip_update.trip
-            trip_dict = marc_info['trips'][trip_desc.trip_id]
-            route_dict = marc_info['routes'][trip_desc.route_id]
             sched_relation = schedule_relationship[trip_desc.schedule_relationship]
-
-            
-            print(f"Trip update for {sched_relation} {route_dict['route_long_name'].split()[0]} line {trip_dict['trip_short_name']} to {trip_dict['trip_headsign']}:")
-            curr_time = time.time()
-            dest_id = int(list(trip_update.stop_time_update)[-1].stop_id)
-            for stu in trip_update.stop_time_update:
-                if stu.HasField('arrival'):
-                    ts = stu.arrival.time
-                    from_now = int((ts - curr_time) / 60)
-                    if ts > curr_time and from_now > 0:
-                        arr_time = datetime.fromtimestamp(ts)
-                        print(f"Arriving {arr_time} at {marc_info['stops'][stu.stop_id]['stop_name']}")
-                        if stu.stop_id in station_pair:
-                            key = marc_name_map[dest_id] if dest_id in marc_name_map else trip_dict['trip_headsign']
-                            if key in by_dest:
-                                bisect.insort(by_dest[key], from_now)
+            last_stop = list(trip_update.stop_time_update)[-1].stop_id
+            if last_stop in sched: # has realtime update for trip we care about
+                if sched_relation == 'canceled':
+                    # remove from schedule
+                    sched[last_stop] = [x for x in sched[last_stop] if x['trip_id'] != trip_desc.trip_id]
+                else:
+                    for stu in trip_update.stop_time_update:
+                        if stu.stop_id in station_pair and stu.HasField('arrival'):
+                            arrival_time = datetime.fromtimestamp(stu.arrival.time)
+                            if sched_relation == 'scheduled':
+                                print(f"inserting scheduled realtime {arrival_time} for {stu.stop_id} {trip_desc.trip_id}")
+                                # replace scheduled time with real time
+                                sched[last_stop] = [{'arrival_time': arrival_time, 'trip_id': x['trip_id'], 'service_id': x['service_id'], 'realtime': True} if x['trip_id'] == trip_desc.trip_id else x for x in sched[last_stop]]
                             else:
-                                by_dest[key] = [from_now]
-
+                                # insert unscheduled time
+                                bisect.insort_right(sched[last_stop], {'arrival_time': arrival_time, 'trip_id': trip_desc.trip_id, 'realtime': True}, key=(lambda x: x['arrival_time']))
     allocated_rows = 2
-    for key, val in by_dest.items():
+    ordered_arr = []
+    for dest_id, times in sched.items():
+        # remove times that are not within 1-99 minutes away
+        filtered_times = [x for x in times if 0 < int((x['arrival_time'] - dt).total_seconds() / 60) < 100]
+        if filtered_times: # not empty
+            # sort destinations by which is arriving first
+            bisect.insort_right(ordered_arr, {'dest_id': dest_id, 'times': filtered_times}, key=(lambda x: x['times'][0]['arrival_time']))
+
+    for entry in ordered_arr:
+        dest_name = marc_name_map[entry['dest_id']] if entry['dest_id'] in marc_name_map else marc_info['stops'][entry['dest_id']]['stop_name']
+        minutes_str = ""
+        for time in entry['times']:
+            minutes = int((time['arrival_time'] - dt).total_seconds() / 60)
+            if time['realtime']:
+                minutes_str += f"{minutes}, "
+            else:
+                minutes_str += f"<b><i>{minutes}</i></b>, "
+
+        # TODO:
+        # if none, determine next schedule day
+        # return all rows and let caller decide which rows to display
         if allocated_rows <= 0:
             break
-        rows.append(f'<div class="service-name"><div class="image-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div>{key}</div><div class="times">{str(val[:2])[1:-1]}</div>')
+        rows.append(f'<div class="service-name"><div class="image-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div>{dest_name}</div><div class="times">{minutes_str[:-2]}</div>')
         allocated_rows -= 1
     for _ in range(allocated_rows, 0, -1):
         rows.append(f'<div class="service-name"></div>')
@@ -194,6 +236,7 @@ def main(args):
                 download_unpack_zip(marc_static_gtfs_url)
             marc_info = parse_marc_gtfs(marc_path)
             marc_sched = get_marc_schedule(marc_info, args.marc_code)
+            today_sched = get_marcs_for_day(marc_info, marc_sched, datetime.today())
         if args.metro_code is not None:
             metro_key = decrypt_metro_api()
     except Exception as e:
@@ -206,7 +249,7 @@ def main(args):
             if args.metro_code is not None:
                 get_metro_realtime(args.metro_code, rows, metro_key)
             if args.marc_code is not None:
-                get_marc_realtime(args.marc_code, rows, marc_info)
+                get_marc_realtime(args.marc_code, rows, marc_info, today_sched)
             add_purple_line(rows)
             write_rows(rows)
             written_html = Path('DepartureBoard.html').absolute()
@@ -228,4 +271,3 @@ if __name__ == "__main__":
     parser.add_argument('--refresh', type=int, default=0, help="Seconds between page refresh, 0 is no refresh")
     args = parser.parse_args()
     main(args)
-    
