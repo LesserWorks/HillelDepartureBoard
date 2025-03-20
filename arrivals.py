@@ -2,7 +2,7 @@
 
 from google.transit import gtfs_realtime_pb2
 from pathlib import Path
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from threading import Event
 import shutil
 import signal
@@ -11,7 +11,6 @@ import webbrowser
 import requests
 import argparse
 import csv
-import copy
 import bisect
 
 """
@@ -84,6 +83,26 @@ def get_marcs_for_day(marc_info, marc_sched, dt):
         ret[last_stop] = [{'arrival_time': datetime.combine(dt, time.fromisoformat(x['arrival_time'])), 'trip_id': x['trip_id'], 'service_id': x['service_id'], 'realtime': x['realtime']} for x in sched if service_is_running(marc_info, x['service_id'], dt)]
     return ret
 
+def get_next_scheduled_marc(marc_info, marc_sched, dt):
+    timeout = 2
+    while timeout > 0:
+        day_sched = get_marcs_for_day(marc_info, marc_sched, dt)
+        next_for_day = None
+        for times in day_sched.values(): # iterate destinations for day
+            next_for_dest = None
+            for time in times: # iterate times for destination
+                if time['arrival_time'] > dt:
+                    next_for_dest = time['arrival_time']
+                    break
+            if not next_for_day or (next_for_dest and next_for_dest < next_for_day):
+                next_for_day = next_for_dest
+        if next_for_day:
+            return next_for_day
+        else:
+            dt = dt.replace(hour=0, minute=0, second=0)
+            dt += timedelta(days=1) # see if it's running tomorrow
+        timeout -= 1
+
 def get_file_last_modifed(url):
     resp = requests.head(url, allow_redirects=True)
     last_modified = resp.headers['last-modified']
@@ -131,10 +150,10 @@ def parse_marc_gtfs(folder_path):
                         marc_info[file.stem][key] = []
     return marc_info
 
-def get_marc_realtime(marc_code, rows, marc_info, today_sched):
+def get_marc_realtime(marc_code, marc_info, marc_sched):
     station_pair = marc_code.split('-')
-    sched = copy.deepcopy(today_sched)
     dt = datetime.today()
+    sched = get_marcs_for_day(marc_info, marc_sched, dt)
     feed = gtfs_realtime_pb2.FeedMessage()
     response = requests.get('https://mdotmta-gtfs-rt.s3.amazonaws.com/MARC+RT/marc-tu.pb')
     feed.ParseFromString(response.content)
@@ -153,13 +172,11 @@ def get_marc_realtime(marc_code, rows, marc_info, today_sched):
                         if stu.stop_id in station_pair and stu.HasField('arrival'):
                             arrival_time = datetime.fromtimestamp(stu.arrival.time)
                             if sched_relation == 'scheduled':
-                                print(f"inserting scheduled realtime {arrival_time} for {stu.stop_id} {trip_desc.trip_id}")
                                 # replace scheduled time with real time
                                 sched[last_stop] = [{'arrival_time': arrival_time, 'trip_id': x['trip_id'], 'service_id': x['service_id'], 'realtime': True} if x['trip_id'] == trip_desc.trip_id else x for x in sched[last_stop]]
                             else:
                                 # insert unscheduled time
                                 bisect.insort_right(sched[last_stop], {'arrival_time': arrival_time, 'trip_id': trip_desc.trip_id, 'realtime': True}, key=(lambda x: x['arrival_time']))
-    allocated_rows = 2
     ordered_arr = []
     for dest_id, times in sched.items():
         # remove times that are not within 1-99 minutes away
@@ -167,7 +184,7 @@ def get_marc_realtime(marc_code, rows, marc_info, today_sched):
         if filtered_times: # not empty
             # sort destinations by which is arriving first
             bisect.insort_right(ordered_arr, {'dest_id': dest_id, 'times': filtered_times}, key=(lambda x: x['times'][0]['arrival_time']))
-
+    rows = []
     for entry in ordered_arr:
         dest_name = marc_name_map[entry['dest_id']] if entry['dest_id'] in marc_name_map else marc_info['stops'][entry['dest_id']]['stop_name']
         minutes_str = ""
@@ -177,18 +194,15 @@ def get_marc_realtime(marc_code, rows, marc_info, today_sched):
                 minutes_str += f"{minutes}, "
             else:
                 minutes_str += f"<b><i>{minutes}</i></b>, "
-
-        # TODO:
-        # if none, determine next schedule day
-        # return all rows and let caller decide which rows to display
-        if allocated_rows <= 0:
-            break
         rows.append(f'<div class="service-name"><div class="image-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div>{dest_name}</div><div class="times">{minutes_str[:-2]}</div>')
-        allocated_rows -= 1
-    for _ in range(allocated_rows, 0, -1):
-        rows.append(f'<div class="service-name"></div>')
+    
+    if not rows: # no trains are coming within the next 99 minutes
+        next_marc_time = get_next_scheduled_marc(marc_info, marc_sched, dt)
+        time_str = next_marc_time.strftime('%B %-d at %H:%M')
+        rows.append(f'<div class="service-name"><div class="image-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div>Service resumes {time_str}</div>')
+    return rows
 
-def get_metro_realtime(code, rows, key):
+def get_metro_realtime(code, key):
     url = f'http://api.wmata.com/StationPrediction.svc/json/GetPrediction/{code}?api_key={key}'
     resp = requests.get(url)
     data = resp.json()
@@ -203,20 +217,17 @@ def get_metro_realtime(code, rows, key):
             bisect.insort_right(by_dest[key], (int(entry['Min']), entry['Line']), key=(lambda x: x[0]))
         else:
             by_dest[key] = [(int(entry['Min']), entry['Line'])]
-
-    allocated_rows = 2
+    rows = []
     for key, val in by_dest.items():
-        if allocated_rows <= 0:
-            break
         times_str = [x[0] for x in val]
         rows.append(f'<div class="service-name"><img src="images/WMATA_Metro_Logo.svg" class="metro-logo"><div class="metro-bullet {val[0][1]}">{val[0][1]}</div>{key}</div><div class="times">{str(times_str[:2])[1:-1]}</div>')
-        allocated_rows -= 1
-    for _ in range(allocated_rows, 0, -1):
-        rows.append(f'<div class="service-name"><img src="images/WMATA_Metro_Logo.svg" class="metro-logo"></div>')
+    return rows
 
-def add_purple_line(rows):
+def add_purple_line():
+    rows = []
     rows.append(f'<div class="service-name"></div>')
     rows.append(f'<div class="service-name"><div class="image-backer"><img src="images/MTA_Purple_Line_logo.svg.png" class="purple-line-logo"></div>Coming 2027</div>')
+    return rows
 
 def write_rows(rows):
     with open('template.html', 'r') as infile:
@@ -230,13 +241,12 @@ def main(args):
     marc_path = './mdotmta_gtfs_marc'
     try:
         if args.marc_code is not None:
-            marc_static_gtfs_url  = 'https://feeds.mta.maryland.gov/gtfs/marc'
+            marc_static_gtfs_url = 'https://feeds.mta.maryland.gov/gtfs/marc'
             marc_gtfs_modified = get_file_last_modifed(marc_static_gtfs_url)
             if not Path(marc_path).exists() or Path(marc_path).stat().st_mtime < marc_gtfs_modified:
                 download_unpack_zip(marc_static_gtfs_url)
             marc_info = parse_marc_gtfs(marc_path)
             marc_sched = get_marc_schedule(marc_info, args.marc_code)
-            today_sched = get_marcs_for_day(marc_info, marc_sched, datetime.today())
         if args.metro_code is not None:
             metro_key = decrypt_metro_api()
     except Exception as e:
@@ -247,10 +257,10 @@ def main(args):
         try:
             rows = []
             if args.metro_code is not None:
-                get_metro_realtime(args.metro_code, rows, metro_key)
+                rows += get_metro_realtime(args.metro_code, metro_key)[:2]
             if args.marc_code is not None:
-                get_marc_realtime(args.marc_code, rows, marc_info, today_sched)
-            add_purple_line(rows)
+                rows += get_marc_realtime(args.marc_code, marc_info, marc_sched)[:2]
+            rows += add_purple_line()[:2]
             write_rows(rows)
             written_html = Path('DepartureBoard.html').absolute()
             webbrowser.open(f"file://{written_html}", new=0, autoraise=False)
