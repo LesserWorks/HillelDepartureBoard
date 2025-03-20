@@ -223,12 +223,6 @@ def get_metro_realtime(code, key):
         rows.append(f'<div class="service-name"><img src="images/WMATA_Metro_Logo.svg" class="metro-logo"><div class="metro-bullet {val[0][1]}">{val[0][1]}</div>{key}</div><div class="times">{str(times_str[:2])[1:-1]}</div>')
     return rows
 
-def add_purple_line():
-    rows = []
-    rows.append(f'<div class="service-name"></div>')
-    rows.append(f'<div class="service-name"><div class="image-backer"><img src="images/MTA_Purple_Line_logo.svg.png" class="purple-line-logo"></div>Coming 2027</div>')
-    return rows
-
 def write_rows(rows):
     with open('template.html', 'r') as infile:
         template = infile.read()
@@ -255,12 +249,21 @@ def main(args):
 
     while not exit_event.is_set():
         try:
-            rows = []
+            metro_rows = []
+            marc_rows = []
+            # Purple line always gets bottom row
+            # MARC gets at most 3
+            # Metro gets the rest
+            # Blank lines for the rest
             if args.metro_code is not None:
-                rows += get_metro_realtime(args.metro_code, metro_key)[:2]
+                metro_rows = get_metro_realtime(args.metro_code, metro_key)
             if args.marc_code is not None:
-                rows += get_marc_realtime(args.marc_code, marc_info, marc_sched)[:2]
-            rows += add_purple_line()[:2]
+                marc_rows = get_marc_realtime(args.marc_code, marc_info, marc_sched)
+            rows = metro_rows[:(5 - len(marc_rows))] + marc_rows[:3]
+            blank_row = '<div class="service-name"></div>'
+            purple_row = '<div class="service-name"><div class="image-backer"><img src="images/MTA_Purple_Line_logo.svg.png" class="purple-line-logo"></div>Coming 2027</div>'
+            rows += [blank_row] * (5 - len(rows))
+            rows.append(purple_row)
             write_rows(rows)
             written_html = Path('DepartureBoard.html').absolute()
             webbrowser.open(f"file://{written_html}", new=0, autoraise=False)
