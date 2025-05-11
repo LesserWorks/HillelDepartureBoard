@@ -266,7 +266,8 @@ def main(args):
             rows.append(purple_row)
             write_rows(rows)
             written_html = Path('DepartureBoard.html').absolute()
-            webbrowser.open(f"file://{written_html}", new=0, autoraise=False)
+            if args.webbrowser:
+                webbrowser.open(f"file://{written_html}", new=0, autoraise=False)
             if args.refresh > 0:
                 exit_event.wait(args.refresh)
             else:
@@ -282,5 +283,6 @@ if __name__ == "__main__":
     parser.add_argument('--marc_code', type=str, default=None, help="MARC station code pair, e.g. 11989-11988")
     parser.add_argument('--metro_code', type=str, default=None, help="Metro station code (CP is E09)")
     parser.add_argument('--refresh', type=int, default=0, help="Seconds between page refresh, 0 is no refresh")
+    parser.add_argument('--webbrowser', action='store_true', default=False, help="If the Python Webbrowser library should be used to refresh the page")
     args = parser.parse_args()
     main(args)
