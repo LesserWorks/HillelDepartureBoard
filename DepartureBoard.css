@@ -5,7 +5,8 @@
 html, body {
 	height: 100%;
   overflow: hidden;
-	font-family: "HelveticaNeue-Bold", "Helvetica Neue Bold", Arial, sans-serif;
+	font-family: "HelveticaNeue-Bold", "Helvetica Neue Bold", "Nimbus Sans", Arial, sans-serif;
+  font-weight: bold;
 	background: #2c3647
 }
 
