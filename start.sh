@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Turn on screen
-xrandr --output HDMI-I --auto
+xrandr --output HDMI-1 --auto
 # kill script if already running
 if [ -f arrivals_pid.txt ]; then
     kill -9 $(<arrivals_pid.txt)
