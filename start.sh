@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Turn on screen
+xrandr --output HDMI-I --auto
 # kill script if already running
 if [ -f arrivals_pid.txt ]; then
     kill -9 $(<arrivals_pid.txt)
@@ -11,7 +12,7 @@ if [ -f brave_pid.txt ]; then
     rm brave_pid.txt
 fi
 # Start browser storing PID
-nohup brave-browser --suppress-message-center-popups --start-fullscreen file:///home/ubuntu/Documents/HillelDepartureBoard/DepartureBoard.html >/dev/null 2>&1 &
+nohup brave-browser --suppress-message-center-popups --start-fullscreen file:///home/user/HillelDepartureBoard/DepartureBoard.html >/dev/null 2>&1 &
 echo $! > brave_pid.txt
 # Start arrivals script storing PID
 nohup ./arrivals.py --marc_code 12018-12015 --metro_code E09 --refresh 20 >/dev/null 2>&1 &
