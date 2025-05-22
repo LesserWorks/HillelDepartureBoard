@@ -6,5 +6,5 @@ rm arrivals_pid.txt
 kill $(<brave_pid.txt)
 rm brave_pid.txt
 # turn off screen
-xrandr --output HDMI-I --off
+xrandr --output HDMI-1 --off
 # sleep
