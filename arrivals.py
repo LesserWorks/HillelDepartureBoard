@@ -8,6 +8,7 @@ import shutil
 import signal
 import subprocess
 import webbrowser
+import traceback
 import requests
 import argparse
 import csv
@@ -188,12 +189,16 @@ def get_marc_realtime(marc_code, marc_info, marc_sched):
     for entry in ordered_arr:
         dest_name = marc_name_map[entry['dest_id']] if entry['dest_id'] in marc_name_map else marc_info['stops'][entry['dest_id']]['stop_name']
         minutes_str = ""
+        max_times = 2
         for time in entry['times']:
+            if max_times <= 0:
+                break
             minutes = int((time['arrival_time'] - dt).total_seconds() / 60)
             if time['realtime']:
                 minutes_str += f"{minutes}, "
             else:
                 minutes_str += f"<b><i>{minutes}</i></b>, "
+            max_times -= 1
         rows.append(f'<div class="service-name"><div class="image-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div>{dest_name}</div><div class="times">{minutes_str[:-2]}</div>')
     
     if not rows: # no trains are coming within the next 99 minutes
@@ -207,6 +212,8 @@ def get_metro_realtime(code, key):
     resp = requests.get(url)
     data = resp.json()
     filtered = []
+    if 'Trains' not in data:
+        return []
     for entry in data["Trains"]:
         if entry['DestinationName'] not in ['No Passenger', 'Train'] and entry['Min'] not in ['ARR', 'BRD', 'DLY']:
             filtered.append(entry)
@@ -243,8 +250,8 @@ def main(args):
             marc_sched = get_marc_schedule(marc_info, args.marc_code)
         if args.metro_code is not None:
             metro_key = decrypt_metro_api()
-    except Exception as e:
-        print(f"{type(e).__name__}: {e}")
+    except Exception:
+        print(traceback.format_exc())
         return
 
     while not exit_event.is_set():
@@ -272,8 +279,8 @@ def main(args):
                 exit_event.wait(args.refresh)
             else:
                 return
-        except Exception as e:
-            print(f"{type(e).__name__}: {e}")
+        except Exception:
+            print(traceback.format_exc())
 
 if __name__ == "__main__":
     signal.signal(signal.SIGTERM, exit_handler)
