@@ -85,7 +85,7 @@ def get_marcs_for_day(marc_info, marc_sched, dt):
     return ret
 
 def get_next_scheduled_marc(marc_info, marc_sched, dt):
-    timeout = 2
+    timeout = 7
     while timeout > 0:
         day_sched = get_marcs_for_day(marc_info, marc_sched, dt)
         next_for_day = None
@@ -103,6 +103,7 @@ def get_next_scheduled_marc(marc_info, marc_sched, dt):
             dt = dt.replace(hour=0, minute=0, second=0)
             dt += timedelta(days=1) # see if it's running tomorrow
         timeout -= 1
+    return None
 
 def get_file_last_modifed(url):
     resp = requests.head(url, allow_redirects=True)
@@ -203,8 +204,9 @@ def get_marc_realtime(marc_code, marc_info, marc_sched):
     
     if not rows: # no trains are coming within the next 99 minutes
         next_marc_time = get_next_scheduled_marc(marc_info, marc_sched, dt)
-        time_str = next_marc_time.strftime('%B %-d at %H:%M')
-        rows.append(f'<div class="service-name"><div class="image-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div>Service resumes {time_str}</div>')
+        if next_marc_time:
+            time_str = next_marc_time.strftime('%B %-d at %H:%M')
+            rows.append(f'<div class="service-name"><div class="image-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div>Service resumes {time_str}</div>')
     return rows
 
 def get_metro_realtime(code, key):
