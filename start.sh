@@ -14,5 +14,3 @@ export DISPLAY=:0 && nohup brave-browser --suppress-message-center-popups --disa
 source /home/user/.venv/bin/activate
 nohup ./arrivals.py --marc_code 12018-12015 --metro_code E09 --refresh 20 >/dev/null 2>&1 &
 echo $! > arrivals_pid.txt
-# Hide mouse pointer
-unclutter -idle 0
