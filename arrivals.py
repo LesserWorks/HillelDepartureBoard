@@ -331,7 +331,7 @@ def get_metro_realtime(code, key):
             "Min" in entry
             and "DestinationName" in entry
             and entry["DestinationName"] not in ["No Passenger", "Train"]
-            and entry["Min"] not in ["ARR", "BRD", "DLY"]
+            and entry["Min"] not in ["ARR", "BRD", "DLY", ""]
         ):
             filtered.append(entry)
     by_dest = {}

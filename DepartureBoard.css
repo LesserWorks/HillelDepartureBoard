@@ -5,6 +5,7 @@
 html, body {
 	height: 100%;
   overflow: hidden;
+  cursor: none;
 	font-family: "HelveticaNeue-Bold", "Helvetica Neue Bold", "Nimbus Sans", Arial, sans-serif;
   font-weight: bold;
 	background: #2c3647
