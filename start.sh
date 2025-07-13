@@ -9,8 +9,10 @@ fi
 # Close browser in case it was running
 pkill brave
 # Start browser storing PID
-export DISPLAY=:0 && nohup brave-browser --suppress-message-center-popups --disable-dialog --kiosk file:///home/user/HillelDepartureBoard/DepartureBoard.html >/dev/null 2>&1
+export DISPLAY=:0 && nohup brave-browser --suppress-message-center-popups --disable-dialog --start-fullscreen file:///home/user/HillelDepartureBoard/DepartureBoard.html >/dev/null 2>&1
 # Start arrivals script storing PID
 source /home/user/.venv/bin/activate
 nohup ./arrivals.py --marc_code 12018-12015 --metro_code E09 --refresh 20 >/dev/null 2>&1 &
 echo $! > arrivals_pid.txt
+# Hide mouse pointer
+unclutter -idle 0
