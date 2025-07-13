@@ -12,8 +12,9 @@ if [ -f brave_pid.txt ]; then
     rm brave_pid.txt
 fi
 # Start browser storing PID
-nohup brave-browser --suppress-message-center-popups --start-fullscreen file:///home/user/HillelDepartureBoard/DepartureBoard.html >/dev/null 2>&1 &
+export DISPLAY=:0 && nohup brave-browser --suppress-message-center-popups --start-fullscreen file:///home/user/HillelDepartureBoard/DepartureBoard.html >/dev/null 2>&1 &
 echo $! > brave_pid.txt
 # Start arrivals script storing PID
+source /home/user/.venv/bin/activate
 nohup ./arrivals.py --marc_code 12018-12015 --metro_code E09 --refresh 20 >/dev/null 2>&1 &
 echo $! > arrivals_pid.txt

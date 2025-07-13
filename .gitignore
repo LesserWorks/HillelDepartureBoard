@@ -4,3 +4,4 @@ mdotmta_gtfs_marc/
 __pycache__
 *.zip
 *.key
+*pid.txt
