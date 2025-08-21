@@ -1,3 +1,2 @@
-0 6 * * * cd /home/user/HillelDepartureBoard/; git pull; ./start.sh
-0 0 * * * cd /home/user/HillelDepartureBoard/; ./stop.sh
-@reboot cd /home/user/HillelDepartureBoard/; git pull; ./start.sh
+0 6 * * * cd /home/admin/Documents/HillelDepartureBoard; git pull; sudo systemctl start kiosk.service
+0 0 * * * xset dpms force off; sudo systemctl stop kiosk.service

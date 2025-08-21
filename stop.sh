@@ -3,8 +3,8 @@
 kill -9 $(<arrivals_pid.txt)
 rm arrivals_pid.txt
 # kill browser
-kill $(<brave_pid.txt)
-rm brave_pid.txt
+kill $(<chrome_pid.txt)
+rm chrome_pid.txt
 # turn off screen
 xrandr --output HDMI-1 --off
 # sleep
