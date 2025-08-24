@@ -1,2 +1,2 @@
-0 6 * * * cd /home/admin/Documents/HillelDepartureBoard; git pull; sudo systemctl start kiosk.service
-0 0 * * * sudo systemctl stop kiosk.service; xset dpms force off
+15 7 * * * sudo reboot
+30 23 * * * sudo systemctl stop kiosk.service; wlr-randr --output HDMI-A-1 --off; cd /home/admin/Documents/HillelDepartureBoard; git pull

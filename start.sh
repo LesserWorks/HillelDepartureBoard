@@ -2,6 +2,7 @@
 
 xset s noblank
 xset s off
+wlr-randr --output HDMI-A-1 --on
 
 unclutter -idle 1 -root &
 
