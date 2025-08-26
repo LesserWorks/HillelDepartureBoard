@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# kill script
-kill -9 $(<arrivals_pid.txt)
-rm arrivals_pid.txt
-# kill browser
-kill $(<chrome_pid.txt)
-rm chrome_pid.txt
-# turn off screen
-xrandr --output HDMI-1 --off
-# sleep
+sudo systemctl stop kiosk.service
+
+export WAYLAND_DISPLAY=wayland-0
+export XDG_RUNTIME_DIR=/run/user/1000
+/usr/bin/wlr-randr --output HDMI-A-1 --off
+
+ cd /home/admin/Documents/HillelDepartureBoard; git pull
+ 

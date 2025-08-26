@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-xset s noblank
-xset s off
-wlr-randr --output HDMI-A-1 --on
+export WAYLAND_DISPLAY=wayland-0
+export XDG_RUNTIME_DIR=/run/user/1000
+/usr/bin/wlr-randr --output HDMI-A-1 --on
 
 unclutter -idle 1 -root &
 

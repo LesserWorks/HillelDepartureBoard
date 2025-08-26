@@ -1,2 +1,2 @@
 15 7 * * * sudo reboot
-30 23 * * * sudo systemctl stop kiosk.service; wlr-randr --output HDMI-A-1 --off; cd /home/admin/Documents/HillelDepartureBoard; git pull
+30 23 * * * /home/admin/HillelDepartureBoard/stop.sh
