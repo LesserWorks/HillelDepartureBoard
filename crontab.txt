@@ -1,2 +1,2 @@
 15 7 * * * sudo reboot
-30 23 * * * /home/admin/HillelDepartureBoard/stop.sh
+10 23 * * * /home/admin/Documents/HillelDepartureBoard/stop.sh

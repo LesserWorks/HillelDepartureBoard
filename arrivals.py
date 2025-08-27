@@ -235,7 +235,8 @@ def get_marc_realtime(marc_code, marc_info, marc_sched):
             trip_update = entity.trip_update
             trip_desc = trip_update.trip
             sched_relation = schedule_relationship[trip_desc.schedule_relationship]
-            last_stop = list(trip_update.stop_time_update)[-1].stop_id
+            stop_updates = list(trip_update.stop_time_update)
+            last_stop = stop_updates[-1].stop_id if len(stop_updates) >= 1 else None
             if last_stop in sched:  # has realtime update for trip we care about
                 if sched_relation == "canceled":
                     # remove from schedule
