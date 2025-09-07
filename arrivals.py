@@ -315,7 +315,7 @@ def get_marc_realtime(marc_code, marc_info, marc_sched):
         if next_marc_time:
             time_str = next_marc_time.strftime("%B %-d at %-I:%M %p")
             rows.append(
-                f'<div class="service-name"><div class="image-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div>Service resumes {time_str}</div>'
+                f'<div class="service-name"><div class="image-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div><i>Service resumes {time_str}</i></div>'
             )
     return rows
 
