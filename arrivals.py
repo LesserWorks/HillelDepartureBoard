@@ -395,7 +395,7 @@ def main(args):
                 marc_rows = get_marc_realtime(args.marc_code, marc_info, marc_sched)
             rows = metro_rows[: (5 - len(marc_rows))] + marc_rows[:3]
             blank_row = '<div class="service-name"></div>'
-            purple_row = '<div class="service-name"><div class="image-backer"><img src="images/MTA_Purple_Line_logo.svg.png" class="purple-line-logo"></div>Coming 2027</div>'
+            purple_row = '<div class="service-name"><div class="image-backer"><img src="images/MTA_Purple_Line_logo.svg.png" class="purple-line-logo"></div><i>Coming 2027</i></div>'
             rows += [blank_row] * (5 - len(rows))
             rows.append(purple_row)
             write_rows(rows)
