@@ -315,7 +315,7 @@ def get_marc_realtime(marc_code, marc_info, marc_sched):
         if next_marc_time:
             time_str = next_marc_time.strftime("%B %-d at %-I:%M %p")
             rows.append(
-                f'<div class="service-name"><div class="image-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div><i>Service resumes {time_str}</i></div>'
+                f'<div class="service-name"><div class="image-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div></div><div class="times"><i>Resumes {time_str}</i></div>'
             )
     return rows
 
@@ -395,7 +395,7 @@ def main(args):
                 marc_rows = get_marc_realtime(args.marc_code, marc_info, marc_sched)
             rows = metro_rows[: (5 - len(marc_rows))] + marc_rows[:3]
             blank_row = '<div class="service-name"></div>'
-            purple_row = '<div class="service-name"><div class="image-backer"><img src="images/MTA_Purple_Line_logo.svg.png" class="purple-line-logo"></div><i>Coming 2027</i></div>'
+            purple_row = '<div class="service-name"><div class="image-backer"><img src="images/MTA_Purple_Line_logo.svg.png" class="purple-line-logo"></div></div><div class="times"><i>Coming 2027</i></div>'
             rows += [blank_row] * (5 - len(rows))
             rows.append(purple_row)
             write_rows(rows)
