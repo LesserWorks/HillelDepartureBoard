@@ -52,6 +52,9 @@ marc_name_map = {
     "12025": "Dorsey",
     "11980": "Baltimore Penn",
     "12002": "Baltimore Penn",
+    "11972": "Frederick",
+    "11973": "Brunswick",
+    "11940": "Martinsburg"
 }
 
 schedule_relationship = [
