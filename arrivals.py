@@ -318,7 +318,7 @@ def get_marc_realtime(marc_code, marc_info, marc_sched):
     if not rows:  # no trains are coming within the next 99 minutes
         next_marc_time = get_next_scheduled_marc(marc_info, marc_sched, dt)
         if next_marc_time:
-            time_str = next_marc_time.strftime("%B %-d at %-I:%M %p")
+            time_str = next_marc_time.strftime("%b %-d at %-I:%M %p")
             rows.append(
                 f'<div class="service-name"><div class="image-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div></div><div class="times"><i>Resumes {time_str}</i></div>'
             )
