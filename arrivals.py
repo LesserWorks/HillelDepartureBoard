@@ -375,13 +375,14 @@ def main(args):
     marc_path = "./mdotmta_gtfs_marc"
     if args.marc_code:
         marc_static_gtfs_url = "https://feeds.mta.maryland.gov/gtfs/marc"
+        marc_gtfs_modified = None
         resp = requester(marc_static_gtfs_url, 'head')
         if resp:
             last_modified = resp.headers["last-modified"]
             marc_gtfs_modified = datetime.strptime(last_modified, "%a, %d %b %Y %H:%M:%S %Z").timestamp()
         if (
             not Path(marc_path).exists()
-            or Path(marc_path).stat().st_mtime < marc_gtfs_modified
+            or (marc_gtfs_modified and Path(marc_path).stat().st_mtime < marc_gtfs_modified)
         ):
             resp = requester(marc_static_gtfs_url, 'get')
             if resp:
@@ -409,6 +410,7 @@ def main(args):
         try:
             if saw_error:
                 subprocess.run(['sudo', 'systemctl', 'restart', 'NetworkManager'])
+                time.sleep(10)
             metro_rows = get_metro_rows(metro_resp)
             marc_rows = get_marc_rows(marc_resp, args.marc_code, marc_info, marc_sched)
             # Purple line always gets bottom row
