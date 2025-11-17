@@ -7,6 +7,9 @@ export XDG_RUNTIME_DIR=/run/user/1000
 unclutter -idle 1 -root &
 
 rm -rf /home/$USER/.cache/chromium && rm -rf /home/$USER/.config/chromium
+# disable wifi power management
+sudo iwconfig wlan0 power off
+sudo systemctl restart NetworkManager
 
 echo "$(</home/admin/Documents/HillelDepartureBoard/crontab.txt)" | crontab -
 source /home/admin/Documents/HillelDepartureBoard/venv/bin/activate

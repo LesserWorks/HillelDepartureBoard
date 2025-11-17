@@ -76,6 +76,18 @@ exit_event = Event()
 def exit_handler(signal, frame):
     exit_event.set()
 
+def requester(url, method):
+    try:
+        if method == 'get':
+            return requests.get(url, allow_redirects=True, timeout=3)
+        elif method == 'head':
+            return requests.head(url, allow_redirects=True, timeout=3)
+        else:
+            return None
+    except Exception:
+        print(traceback.format_exc())
+    return None
+
 
 def get_marc_schedule(marc_info, marc_code):
     staton_pair = marc_code.split("-")
@@ -160,18 +172,11 @@ def get_next_scheduled_marc(marc_info, marc_sched, dt):
     return None
 
 
-def get_file_last_modifed(url):
-    resp = requests.head(url, allow_redirects=True)
-    last_modified = resp.headers["last-modified"]
-    return datetime.strptime(last_modified, "%a, %d %b %Y %H:%M:%S %Z").timestamp()
-
-
-def download_unpack_zip(url):
-    resp = requests.get(url, allow_redirects=True)
+def unpack_zip(resp, dest):
     temp_path = Path("./temp.zip")
     with open(temp_path, "wb") as out:
         out.write(resp.content)
-    shutil.unpack_archive(temp_path, "mdotmta_gtfs_marc")
+    shutil.unpack_archive(temp_path, dest)
     temp_path.unlink()
 
 
@@ -226,58 +231,58 @@ def parse_marc_gtfs(folder_path):
     return marc_info
 
 
-def get_marc_realtime(marc_code, marc_info, marc_sched):
+def get_marc_rows(realtime, marc_code, marc_info, marc_sched):
+    if not marc_code:
+        return []
     station_pair = marc_code.split("-")
     dt = datetime.today()
     sched = get_marcs_for_day(marc_info, marc_sched, dt)
     feed = gtfs_realtime_pb2.FeedMessage()
-    response = requests.get(
-        "https://mdotmta-gtfs-rt.s3.amazonaws.com/MARC+RT/marc-tu.pb"
-    )
-    feed.ParseFromString(response.content)
-    for entity in feed.entity:
-        if entity.HasField("trip_update"):
-            trip_update = entity.trip_update
-            trip_desc = trip_update.trip
-            sched_relation = schedule_relationship[trip_desc.schedule_relationship]
-            stop_updates = list(trip_update.stop_time_update)
-            last_stop = stop_updates[-1].stop_id if len(stop_updates) >= 1 else None
-            if last_stop in sched:  # has realtime update for trip we care about
-                if sched_relation == "canceled":
-                    # remove from schedule
-                    sched[last_stop] = [
-                        x for x in sched[last_stop] if x["trip_id"] != trip_desc.trip_id
-                    ]
-                else:
-                    for stu in trip_update.stop_time_update:
-                        if stu.stop_id in station_pair and stu.HasField("arrival"):
-                            arrival_time = datetime.fromtimestamp(stu.arrival.time)
-                            if sched_relation == "scheduled":
-                                # replace scheduled time with real time
-                                sched[last_stop] = [
-                                    (
+    if realtime:
+        feed.ParseFromString(realtime.content)
+        for entity in feed.entity:
+            if entity.HasField("trip_update"):
+                trip_update = entity.trip_update
+                trip_desc = trip_update.trip
+                sched_relation = schedule_relationship[trip_desc.schedule_relationship]
+                stop_updates = list(trip_update.stop_time_update)
+                last_stop = stop_updates[-1].stop_id if len(stop_updates) >= 1 else None
+                if last_stop in sched:  # has realtime update for trip we care about
+                    if sched_relation == "canceled":
+                        # remove from schedule
+                        sched[last_stop] = [
+                            x for x in sched[last_stop] if x["trip_id"] != trip_desc.trip_id
+                        ]
+                    else:
+                        for stu in trip_update.stop_time_update:
+                            if stu.stop_id in station_pair and stu.HasField("arrival"):
+                                arrival_time = datetime.fromtimestamp(stu.arrival.time)
+                                if sched_relation == "scheduled":
+                                    # replace scheduled time with real time
+                                    sched[last_stop] = [
+                                        (
+                                            {
+                                                "arrival_time": arrival_time,
+                                                "trip_id": x["trip_id"],
+                                                "service_id": x["service_id"],
+                                                "realtime": True,
+                                            }
+                                            if x["trip_id"] == trip_desc.trip_id
+                                            else x
+                                        )
+                                        for x in sched[last_stop]
+                                    ]
+                                else:
+                                    # insert unscheduled time
+                                    bisect.insort_right(
+                                        sched[last_stop],
                                         {
                                             "arrival_time": arrival_time,
-                                            "trip_id": x["trip_id"],
-                                            "service_id": x["service_id"],
+                                            "trip_id": trip_desc.trip_id,
                                             "realtime": True,
-                                        }
-                                        if x["trip_id"] == trip_desc.trip_id
-                                        else x
+                                        },
+                                        key=(lambda x: x["arrival_time"]),
                                     )
-                                    for x in sched[last_stop]
-                                ]
-                            else:
-                                # insert unscheduled time
-                                bisect.insort_right(
-                                    sched[last_stop],
-                                    {
-                                        "arrival_time": arrival_time,
-                                        "trip_id": trip_desc.trip_id,
-                                        "realtime": True,
-                                    },
-                                    key=(lambda x: x["arrival_time"]),
-                                )
     ordered_arr = []
     for dest_id, times in sched.items():
         # remove times that are not within 1-99 minutes away
@@ -325,14 +330,14 @@ def get_marc_realtime(marc_code, marc_info, marc_sched):
     return rows
 
 
-def get_metro_realtime(code, key):
-    url = f"http://api.wmata.com/StationPrediction.svc/json/GetPrediction/{code}?api_key={key}"
-    resp = requests.get(url)
-    data = resp.json()
+def get_metro_rows(realtime):
+    if realtime is None:
+        return ['<div class="service-name"><img src="images/WMATA_Metro_Logo.svg" class="metro-logo">Could not connect to Metro transit feed</div>']
+    data = realtime.json()
     filtered = []
     if "Trains" not in data:
         return []
-    for entry in data["Trains"]:
+    for entry in data.get("Trains", []):
         if (
             "Min" in entry
             and "DestinationName" in entry
@@ -366,41 +371,53 @@ def write_rows(rows):
     with open("DepartureBoard.html", "w") as outfile:
         outfile.write(template)
 
-
 def main(args):
     marc_path = "./mdotmta_gtfs_marc"
-    try:
-        if args.marc_code is not None:
-            marc_static_gtfs_url = "https://feeds.mta.maryland.gov/gtfs/marc"
-            marc_gtfs_modified = get_file_last_modifed(marc_static_gtfs_url)
-            if (
-                not Path(marc_path).exists()
-                or Path(marc_path).stat().st_mtime < marc_gtfs_modified
-            ):
-                download_unpack_zip(marc_static_gtfs_url)
-            marc_info = parse_marc_gtfs(marc_path)
-            marc_sched = get_marc_schedule(marc_info, args.marc_code)
-        if args.metro_code is not None:
-            metro_key = decrypt_metro_api()
-    except Exception:
-        print(traceback.format_exc())
-        return
+    if args.marc_code:
+        marc_static_gtfs_url = "https://feeds.mta.maryland.gov/gtfs/marc"
+        resp = requester(marc_static_gtfs_url, 'head')
+        if resp:
+            last_modified = resp.headers["last-modified"]
+            marc_gtfs_modified = datetime.strptime(last_modified, "%a, %d %b %Y %H:%M:%S %Z").timestamp()
+        if (
+            not Path(marc_path).exists()
+            or Path(marc_path).stat().st_mtime < marc_gtfs_modified
+        ):
+            resp = requester(marc_static_gtfs_url, 'get')
+            if resp:
+                unpack_zip(resp, marc_path)
+        marc_info = parse_marc_gtfs(marc_path)
+        marc_sched = get_marc_schedule(marc_info, args.marc_code)
+    if args.metro_code:
+        metro_key = decrypt_metro_api()
 
     while not exit_event.is_set():
+        metro_resp = None
+        marc_resp = None
+        saw_error = False
+        if args.metro_code:
+            url = f"http://api.wmata.com/StationPrediction.svc/json/GetPrediction/{args.metro_code}?api_key={metro_key}"
+            metro_resp = requester(url, 'get')
+            if not metro_resp:
+                saw_error = True
+        if args.marc_code:
+            url = "https://mdotmta-gtfs-rt.s3.amazonaws.com/MARC+RT/marc-tu.pb"
+            marc_resp = requester(url, 'get')
+            if not marc_resp:
+                saw_error = True
+
         try:
-            metro_rows = []
-            marc_rows = []
+            if saw_error:
+                subprocess.run(['sudo', 'systemctl', 'restart', 'NetworkManager'])
+            metro_rows = get_metro_rows(metro_resp)
+            marc_rows = get_marc_rows(marc_resp, args.marc_code, marc_info, marc_sched)
             # Purple line always gets bottom row
             # MARC gets at most 3
             # Metro gets the rest
             # Blank lines for the rest
-            if args.metro_code is not None:
-                metro_rows = get_metro_realtime(args.metro_code, metro_key)
-            if args.marc_code is not None:
-                marc_rows = get_marc_realtime(args.marc_code, marc_info, marc_sched)
             rows = metro_rows[: (5 - len(marc_rows))] + marc_rows[:3]
             blank_row = '<div class="service-name"></div>'
-            purple_row = '<div class="service-name"><div class="image-backer"><img src="images/MTA_Purple_Line_logo.svg.png" class="purple-line-logo"></div></div><div class="times"><i>Coming 2027</i></div>'
+            purple_row = '<div class="service-name"><div class="image-backer"><img src="images/MTA_Purple_Line_logo.svg.png" class="purple-line-logo"></div></div><div class="times"><i>Coming 2028</i></div>'
             rows += [blank_row] * (5 - len(rows))
             rows.append(purple_row)
             write_rows(rows)
