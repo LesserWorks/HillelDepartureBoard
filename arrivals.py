@@ -408,9 +408,6 @@ def main(args):
                 saw_error = True
 
         try:
-            if saw_error:
-                subprocess.run(['sudo', 'systemctl', 'restart', 'NetworkManager'])
-                time.sleep(10)
             metro_rows = get_metro_rows(metro_resp)
             marc_rows = get_marc_rows(marc_resp, args.marc_code, marc_info, marc_sched)
             # Purple line always gets bottom row
