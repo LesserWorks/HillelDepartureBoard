@@ -1,6 +1,7 @@
 .DS_Store
 DepartureBoard.html
 mdotmta_gtfs_marc/
+metro_gtfs/
 venv/
 __pycache__
 *.zip

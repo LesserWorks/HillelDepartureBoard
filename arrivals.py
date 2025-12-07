@@ -2,8 +2,9 @@
 
 from google.transit import gtfs_realtime_pb2
 from pathlib import Path
-from datetime import datetime, time, timedelta
+from datetime import datetime
 from threading import Event
+from gtfs_helpers import *
 import shutil
 import signal
 import subprocess
@@ -11,12 +12,11 @@ import webbrowser
 import traceback
 import requests
 import argparse
-import csv
 import bisect
 
 """
 static GTFS:
-routes.txt - maps route_id to the 3 route names
+routes.txt - maps route_id to route names
 stops.txt - maps stop_id to station name
 trips.txt - maps trip_id to route_id, service_id, and trip name (like Train 440 is Camden line blah blah)
 stop_times.txt - maps trip_id to arrival and departure times per stop_id (scheduled arr time per stop for Train 440)
@@ -38,7 +38,7 @@ Upon screen update:
 5. Append to realtime array
 
 """
-
+wmata_college_park_id = 'PF_E09_C'
 college_park_nb_id = 12018
 college_park_sb_id = 12015
 new_carrollton_nb_id = 11989
@@ -88,90 +88,6 @@ def requester(url, method):
         print(traceback.format_exc())
     return None
 
-
-def get_marc_schedule(marc_info, marc_code):
-    staton_pair = marc_code.split("-")
-    marc_sched = {}
-    for trip_id, info_list in marc_info["stop_times"].items():
-        service_id = marc_info["trips"][trip_id]["service_id"]
-        for info in info_list:
-            if info["stop_id"] in staton_pair:
-                last_stop = info_list[-1]["stop_id"]
-                if last_stop in marc_sched:
-                    bisect.insort_right(
-                        marc_sched[last_stop],
-                        {
-                            "arrival_time": info["arrival_time"],
-                            "trip_id": trip_id,
-                            "service_id": service_id,
-                            "realtime": False,
-                        },
-                        key=(lambda x: x["arrival_time"]),
-                    )
-                else:
-                    marc_sched[last_stop] = [
-                        {
-                            "arrival_time": info["arrival_time"],
-                            "trip_id": trip_id,
-                            "service_id": service_id,
-                            "realtime": False,
-                        }
-                    ]
-                break  # to next trip_id
-    return marc_sched
-
-
-def service_is_running(marc_info, service_id, dt):
-    str_dt = dt.strftime("%Y%m%d")
-    if service_id in marc_info["calendar_dates"]:
-        for entry in marc_info["calendar_dates"][service_id]:
-            # if found in calendar_dates, overrides other info
-            if entry["date"] == str_dt:
-                return entry["exception_type"] == "1"
-    # if date wasn't in this service_id's calendar dates, check regular calendar list
-    return bool(int(marc_info["calendar"][service_id][dt.weekday()]))
-
-
-def get_marcs_for_day(marc_info, marc_sched, dt):
-    ret = {}
-    for last_stop, sched in marc_sched.items():
-        ret[last_stop] = [
-            {
-                "arrival_time": datetime.combine(
-                    dt, time.fromisoformat(x["arrival_time"])
-                ),
-                "trip_id": x["trip_id"],
-                "service_id": x["service_id"],
-                "realtime": x["realtime"],
-            }
-            for x in sched
-            if service_is_running(marc_info, x["service_id"], dt)
-        ]
-    return ret
-
-
-def get_next_scheduled_marc(marc_info, marc_sched, dt):
-    timeout = 7
-    while timeout > 0:
-        day_sched = get_marcs_for_day(marc_info, marc_sched, dt)
-        next_for_day = None
-        for times in day_sched.values():  # iterate destinations for day
-            next_for_dest = None
-            for time in times:  # iterate times for destination
-                if time["arrival_time"] > dt:
-                    next_for_dest = time["arrival_time"]
-                    break
-            if not next_for_day or (next_for_dest and next_for_dest < next_for_day):
-                next_for_day = next_for_dest
-        if next_for_day:
-            return next_for_day
-        else:
-            dt = dt.replace(hour=0, minute=0, second=0)
-            dt += timedelta(days=1)  # see if it's running tomorrow
-        timeout -= 1
-    return None
-
-
 def unpack_zip(resp, dest):
     temp_path = Path("./temp.zip")
     with open(temp_path, "wb") as out:
@@ -202,41 +118,13 @@ def decrypt_metro_api():
     return key
 
 
-def parse_marc_gtfs(folder_path):
-    marc_info = {}
-    for file in Path(folder_path).iterdir():
-        marc_info[file.stem] = {}
-        # key is unique in these files
-        if file.stem in {"routes", "stops", "trips"}:
-            with open(file) as infile:
-                reader = csv.DictReader(infile)
-                for row in reader:
-                    marc_info[file.stem][list(row.values())[0]] = row
-        # just get the list of days
-        elif file.stem == "calendar":
-            with open(file) as infile:
-                reader = csv.reader(infile)
-                for row in reader:
-                    marc_info[file.stem][row[0]] = row[1:8]
-        # key is repeated in these files
-        elif file.stem in {"calendar_dates", "stop_times"}:
-            with open(file) as infile:
-                reader = csv.DictReader(infile)
-                for row in reader:
-                    key = list(row.values())[0]
-                    if key in marc_info[file.stem]:
-                        marc_info[file.stem][key].append(row)
-                    else:
-                        marc_info[file.stem][key] = []
-    return marc_info
-
 
 def get_marc_rows(realtime, marc_code, marc_info, marc_sched):
     if not marc_code:
         return []
     station_pair = marc_code.split("-")
     dt = datetime.today()
-    sched = get_marcs_for_day(marc_info, marc_sched, dt)
+    sched = get_sched_for_day(marc_info, marc_sched, dt.date())
     feed = gtfs_realtime_pb2.FeedMessage()
     if realtime:
         feed.ParseFromString(realtime.content)
@@ -321,9 +209,10 @@ def get_marc_rows(realtime, marc_code, marc_info, marc_sched):
         )
 
     if not rows:  # no trains are coming within the next 99 minutes
-        next_marc_time = get_next_scheduled_marc(marc_info, marc_sched, dt)
+        next_marc_time = get_next_scheduled(marc_info, marc_sched, dt)
         if next_marc_time:
-            time_str = next_marc_time.strftime("%b %-d at %-I:%M %p")
+            #time_str = next_marc_time.strftime("%A, %b %-d at %-I:%M %p")
+            time_str = next_marc_time.strftime("%A at %-I:%M %p")
             rows.append(
                 f'<div class="service-name"><div class="image-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div></div><div class="times"><i>Resumes {time_str}</i></div>'
             )
@@ -377,7 +266,7 @@ def main(args):
         marc_static_gtfs_url = "https://feeds.mta.maryland.gov/gtfs/marc"
         marc_gtfs_modified = None
         resp = requester(marc_static_gtfs_url, 'head')
-        if resp:
+        if hasattr(resp, 'headers') and 'last-modified' in resp.headers:
             last_modified = resp.headers["last-modified"]
             marc_gtfs_modified = datetime.strptime(last_modified, "%a, %d %b %Y %H:%M:%S %Z").timestamp()
         if (
@@ -387,25 +276,20 @@ def main(args):
             resp = requester(marc_static_gtfs_url, 'get')
             if resp:
                 unpack_zip(resp, marc_path)
-        marc_info = parse_marc_gtfs(marc_path)
-        marc_sched = get_marc_schedule(marc_info, args.marc_code)
+        marc_info = read_gtfs_files(marc_path)
+        marc_sched = get_gtfs_schedule(marc_info, args.marc_code)
     if args.metro_code:
         metro_key = decrypt_metro_api()
 
     while not exit_event.is_set():
         metro_resp = None
         marc_resp = None
-        saw_error = False
         if args.metro_code:
             url = f"http://api.wmata.com/StationPrediction.svc/json/GetPrediction/{args.metro_code}?api_key={metro_key}"
             metro_resp = requester(url, 'get')
-            if not metro_resp:
-                saw_error = True
         if args.marc_code:
             url = "https://mdotmta-gtfs-rt.s3.amazonaws.com/MARC+RT/marc-tu.pb"
             marc_resp = requester(url, 'get')
-            if not marc_resp:
-                saw_error = True
 
         try:
             metro_rows = get_metro_rows(metro_resp)
