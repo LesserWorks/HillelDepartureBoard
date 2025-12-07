@@ -38,7 +38,7 @@ Upon screen update:
 5. Append to realtime array
 
 """
-wmata_college_park_id = 'PF_E09_C'
+wmata_college_park_id = "PF_E09_C"
 college_park_nb_id = 12018
 college_park_sb_id = 12015
 new_carrollton_nb_id = 11989
@@ -56,7 +56,7 @@ marc_name_map = {
     "11944": "Frederick",
     "11973": "Brunswick",
     "11943": "Brunswick",
-    "11940": "Martinsburg"
+    "11940": "Martinsburg",
 }
 
 schedule_relationship = [
@@ -76,17 +76,19 @@ exit_event = Event()
 def exit_handler(signal, frame):
     exit_event.set()
 
+
 def requester(url, method):
     try:
-        if method == 'get':
+        if method == "get":
             return requests.get(url, allow_redirects=True, timeout=3)
-        elif method == 'head':
+        elif method == "head":
             return requests.head(url, allow_redirects=True, timeout=3)
         else:
             return None
     except Exception:
         print(traceback.format_exc())
     return None
+
 
 def unpack_zip(resp, dest):
     temp_path = Path("./temp.zip")
@@ -118,7 +120,6 @@ def decrypt_metro_api():
     return key
 
 
-
 def get_marc_rows(realtime, marc_code, marc_info, marc_sched):
     if not marc_code:
         return []
@@ -139,7 +140,9 @@ def get_marc_rows(realtime, marc_code, marc_info, marc_sched):
                     if sched_relation == "canceled":
                         # remove from schedule
                         sched[last_stop] = [
-                            x for x in sched[last_stop] if x["trip_id"] != trip_desc.trip_id
+                            x
+                            for x in sched[last_stop]
+                            if x["trip_id"] != trip_desc.trip_id
                         ]
                     else:
                         for stu in trip_update.stop_time_update:
@@ -211,7 +214,7 @@ def get_marc_rows(realtime, marc_code, marc_info, marc_sched):
     if not rows:  # no trains are coming within the next 99 minutes
         next_marc_time = get_next_scheduled(marc_info, marc_sched, dt)
         if next_marc_time:
-            #time_str = next_marc_time.strftime("%A, %b %-d at %-I:%M %p")
+            # time_str = next_marc_time.strftime("%A, %b %-d at %-I:%M %p")
             time_str = next_marc_time.strftime("%A at %-I:%M %p")
             rows.append(
                 f'<div class="service-name"><div class="image-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div></div><div class="times"><i>Resumes {time_str}</i></div>'
@@ -221,7 +224,9 @@ def get_marc_rows(realtime, marc_code, marc_info, marc_sched):
 
 def get_metro_rows(realtime):
     if realtime is None:
-        return ['<div class="service-name"><img src="images/WMATA_Metro_Logo.svg" class="metro-logo">Could not connect to Metro transit feed</div>']
+        return [
+            '<div class="service-name"><img src="images/WMATA_Metro_Logo.svg" class="metro-logo">Could not connect to Metro transit feed</div>'
+        ]
     data = realtime.json()
     filtered = []
     if "Trains" not in data:
@@ -260,20 +265,22 @@ def write_rows(rows):
     with open("DepartureBoard.html", "w") as outfile:
         outfile.write(template)
 
+
 def main(args):
     marc_path = "./mdotmta_gtfs_marc"
     if args.marc_code:
         marc_static_gtfs_url = "https://feeds.mta.maryland.gov/gtfs/marc"
         marc_gtfs_modified = None
-        resp = requester(marc_static_gtfs_url, 'head')
-        if hasattr(resp, 'headers') and 'last-modified' in resp.headers:
+        resp = requester(marc_static_gtfs_url, "head")
+        if hasattr(resp, "headers") and "last-modified" in resp.headers:
             last_modified = resp.headers["last-modified"]
-            marc_gtfs_modified = datetime.strptime(last_modified, "%a, %d %b %Y %H:%M:%S %Z").timestamp()
-        if (
-            not Path(marc_path).exists()
-            or (marc_gtfs_modified and Path(marc_path).stat().st_mtime < marc_gtfs_modified)
+            marc_gtfs_modified = datetime.strptime(
+                last_modified, "%a, %d %b %Y %H:%M:%S %Z"
+            ).timestamp()
+        if not Path(marc_path).exists() or (
+            marc_gtfs_modified and Path(marc_path).stat().st_mtime < marc_gtfs_modified
         ):
-            resp = requester(marc_static_gtfs_url, 'get')
+            resp = requester(marc_static_gtfs_url, "get")
             if resp:
                 unpack_zip(resp, marc_path)
         marc_info = read_gtfs_files(marc_path)
@@ -286,10 +293,10 @@ def main(args):
         marc_resp = None
         if args.metro_code:
             url = f"http://api.wmata.com/StationPrediction.svc/json/GetPrediction/{args.metro_code}?api_key={metro_key}"
-            metro_resp = requester(url, 'get')
+            metro_resp = requester(url, "get")
         if args.marc_code:
             url = "https://mdotmta-gtfs-rt.s3.amazonaws.com/MARC+RT/marc-tu.pb"
-            marc_resp = requester(url, 'get')
+            marc_resp = requester(url, "get")
 
         try:
             metro_rows = get_metro_rows(metro_resp)
