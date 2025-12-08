@@ -128,7 +128,7 @@ def decrypt_metro_api():
 def get_metro_rows(realtime):
     if realtime is None:
         return [
-            '<div class="service-name"><img src="images/WMATA_Metro_Logo.svg" class="metro-logo">Could not connect to Metro transit feed</div>'
+            '<div class="service-name"><img src="images/WMATA_Metro_Logo.svg" class="metro-logo">Network error</div>'
         ]
     data = realtime.json()
     filtered = []
