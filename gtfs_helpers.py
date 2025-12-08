@@ -1,8 +1,20 @@
 #!/usr/bin/env python3
+from google.transit import gtfs_realtime_pb2
 from pathlib import Path
 from datetime import datetime, time, timedelta
 import csv
 import bisect
+
+schedule_relationship = [
+    "scheduled",
+    "added",
+    "unscheduled",
+    "canceled",
+    "null",
+    "replacement",
+    "duplicated",
+    "deleted",
+]
 
 
 def read_gtfs_files(folder_path):
@@ -37,7 +49,7 @@ def read_gtfs_files(folder_path):
                     if key in gtfs_info[file.stem]:
                         gtfs_info[file.stem][key].append(row)
                     else:
-                        gtfs_info[file.stem][key] = []
+                        gtfs_info[file.stem][key] = [row]
     return gtfs_info
 
 
@@ -127,3 +139,85 @@ def get_sched_for_day(gtfs_info, gtfs_sched, dt: datetime.date):
             if service_is_running(gtfs_info, x["service_id"], dt)
         ]
     return ret
+
+
+def combine_realtime_with_sched(realtime, stop_ids, gtfs_info, gtfs_sched):
+    if not stop_ids:
+        return []
+    platform_pair = stop_ids.split("-")  # also works for a single center platform
+    dt = datetime.today()
+    sched = get_sched_for_day(gtfs_info, gtfs_sched, dt.date())
+    feed = gtfs_realtime_pb2.FeedMessage()
+    if realtime:
+        feed.ParseFromString(realtime.content)
+        for entity in feed.entity:
+            if entity.HasField("trip_update"):
+                trip_update = entity.trip_update
+                trip_desc = trip_update.trip
+                sched_relation = schedule_relationship[trip_desc.schedule_relationship]
+                stop_updates = list(trip_update.stop_time_update)
+                last_stop = stop_updates[-1].stop_id if len(stop_updates) >= 1 else None
+                if last_stop in sched:  # has realtime update for trip we care about
+                    if sched_relation == "canceled":
+                        # remove from schedule
+                        sched[last_stop] = [
+                            x
+                            for x in sched[last_stop]
+                            if x["trip_id"] != trip_desc.trip_id
+                        ]
+                    else:
+                        for stu in trip_update.stop_time_update:
+                            if stu.stop_id in platform_pair and (
+                                stu.HasField("arrival") or stu.HasField("departure")
+                            ):
+                                if stu.HasField("arrival"):
+                                    used_time = datetime.fromtimestamp(stu.arrival.time)
+                                else:
+                                    used_time = datetime.fromtimestamp(
+                                        stu.departure.time
+                                    )
+                                if sched_relation == "scheduled":
+                                    # replace scheduled time with real time
+                                    sched[last_stop] = [
+                                        (
+                                            {
+                                                "arrival_time": used_time,
+                                                "trip_id": x["trip_id"],
+                                                "service_id": x["service_id"],
+                                                "realtime": True,
+                                            }
+                                            if x["trip_id"] == trip_desc.trip_id
+                                            else x
+                                        )
+                                        for x in sched[last_stop]
+                                    ]
+                                else:
+                                    # insert unscheduled time
+                                    bisect.insort_right(
+                                        sched[last_stop],
+                                        {
+                                            "arrival_time": used_time,
+                                            "trip_id": trip_desc.trip_id,
+                                            "realtime": True,
+                                        },
+                                        key=(lambda x: x["arrival_time"]),
+                                    )
+    ordered_arr = []
+    for dest_id, times in sched.items():
+        # remove times that are not within 1-99 minutes away
+        filtered_times = [
+            {
+                "arrival_time": int((x["arrival_time"] - dt).total_seconds() / 60),
+                "realtime": x["realtime"],
+            }
+            for x in times
+            if 0 < int((x["arrival_time"] - dt).total_seconds() / 60) < 100
+        ]
+        if filtered_times:  # not empty
+            # sort destinations by which is arriving first
+            bisect.insort_right(
+                ordered_arr,
+                {"dest_id": dest_id, "times": filtered_times},
+                key=(lambda x: x["times"][0]),
+            )
+    return ordered_arr
