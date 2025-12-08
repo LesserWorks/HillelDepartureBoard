@@ -99,7 +99,7 @@ def service_is_running(gtfs_info, service_id, dt: datetime.date):
             return True
 
 
-def get_next_scheduled(gtfs_info, gtfs_sched, dt: datetime.datetime):
+def get_next_scheduled(gtfs_info, gtfs_sched, dt: datetime):
     timeout = 7
     while timeout > 0:
         day_sched = get_sched_for_day(gtfs_info, gtfs_sched, dt.date())
@@ -218,6 +218,6 @@ def combine_realtime_with_sched(realtime, stop_ids, gtfs_info, gtfs_sched):
             bisect.insort_right(
                 ordered_arr,
                 {"dest_id": dest_id, "times": filtered_times},
-                key=(lambda x: x["times"][0]),
+                key=(lambda x: x["times"][0]["arrival_time"]),
             )
     return ordered_arr
