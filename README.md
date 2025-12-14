@@ -40,3 +40,10 @@ In the trips.txt, there were a bunch of trips with Hyatsville Crossing as the he
 stop_times.txt also had the trip simply not going past hyattsville at all.
 Seemingly becuase metro says their static GTFS is updated daily.
 However stop_times.txt and trips.txt still had the trips with included the closed stations still there.
+
+Exit fullscreen with Alt-F4
+
+Todo:
+Seems that requester() try catch doesn't always catch domain name resolution failures?
+Try sudo systemctl restart NetworkManager
+Worked when done manually

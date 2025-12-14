@@ -57,6 +57,9 @@ marc_name_map = {
     "11973": "Brunswick",
     "11943": "Brunswick",
     "11940": "Martinsburg",
+    "11979": "Martin Airport",
+    "12003": "Martin Airport",
+    "11976": "Perryville"
 }
 
 
