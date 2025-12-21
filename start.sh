@@ -13,5 +13,5 @@ sudo iwconfig wlan0 power off
 echo "$(</home/admin/Documents/HillelDepartureBoard/crontab.txt)" | crontab -
 source /home/admin/Documents/HillelDepartureBoard/venv/bin/activate
 cp /home/admin/Documents/HillelDepartureBoard/blank.html /home/admin/Documents/HillelDepartureBoard/DepartureBoard.html
-cd /home/admin/Documents/HillelDepartureBoard/; ./arrivals.py --marc_code 11958 --metro_code C04 --refresh 20 &
+cd /home/admin/Documents/HillelDepartureBoard/; ./arrivals.py --marc_code 11958 --metro_code C04 --deploy --refresh 20 &
 chromium-browser --noerrdialogs --disable-infobars --kiosk --no-crash-upload --disable-breakpad --disable-crash-reporter --incognito --disable-translate --no-first-run file:///home/admin/Documents/HillelDepartureBoard/DepartureBoard.html &

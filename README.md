@@ -46,4 +46,9 @@ Exit fullscreen with Alt-F4
 Todo:
 Seems that requester() try catch doesn't always catch domain name resolution failures?
 Try sudo systemctl restart NetworkManager
+It worked in a test python scripts with subprocess sudo systemctl restart networkmamager
 Worked when done manually
+Change desktop image to a less different one
+Purple Line row is cut off just a hair if there are 4 Metro rows and one marc
+Check if marc is correct for origin station cause I didn't see it switch to realtime after scheduled went to 1 min
+- Yead it appears the realtime marc doesn't include the origin station unit it's departed

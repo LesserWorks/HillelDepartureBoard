@@ -70,7 +70,7 @@ def exit_handler(signal, frame):
     exit_event.set()
 
 
-def requester(url, method):
+def requester(url, method, allow_restart):
     try:
         if method == "get":
             return requests.get(url, allow_redirects=True, timeout=3)
@@ -79,14 +79,21 @@ def requester(url, method):
         else:
             return None
     except Exception:
-        print(traceback.format_exc())
+        if allow_restart:
+            exit_event.wait(10)
+            try:
+                subprocess.run(["sudo", "systemctl", "restart", "NetworkManager"])
+            except:
+                pass
+        else:
+            print(traceback.format_exc())
     return None
 
 
 def download_unpack_zip(url, local_path):
     # default to only downloading the GTFS zip file between daily board startup time and 8 am
     gtfs_modified = datetime.today().replace(hour=8).timestamp()
-    resp = requester(url, "head")
+    resp = requester(url, "head", False)
     if hasattr(resp, "headers") and "last-modified" in resp.headers:
         last_modified = resp.headers["last-modified"]
         # set to true last-modified time if available
@@ -97,7 +104,7 @@ def download_unpack_zip(url, local_path):
         not Path(local_path).exists()
         or Path(local_path).stat().st_mtime < gtfs_modified
     ):
-        resp = requester(url, "get")
+        resp = requester(url, "get", False)
         if resp:
             temp_path = Path("./temp.zip")
             with open(temp_path, "wb") as out:
@@ -195,10 +202,10 @@ def main(args):
         marc_resp = None
         if args.metro_code:
             url = f"http://api.wmata.com/StationPrediction.svc/json/GetPrediction/{args.metro_code}?api_key={metro_key}"
-            metro_resp = requester(url, "get")
+            metro_resp = requester(url, "get", args.deploy)
         if args.marc_code:
             url = "https://mdotmta-gtfs-rt.s3.amazonaws.com/MARC+RT/marc-tu.pb"
-            marc_resp = requester(url, "get")
+            marc_resp = requester(url, "get", args.deploy)
 
         try:
             metro_rows = get_metro_rows(metro_resp)
@@ -242,7 +249,7 @@ def main(args):
             # MARC gets at most 3
             # Metro gets the rest
             # Blank lines for the rest
-            rows = metro_rows[: (5 - len(marc_rows))] + marc_rows[:3]
+            rows = metro_rows[: (5 - len(marc_rows[:3]))] + marc_rows[:3]
             blank_row = '<div class="service-name"></div>'
             purple_row = '<div class="service-name"><div class="image-backer"><img src="images/MTA_Purple_Line_logo.svg.png" class="purple-line-logo"></div></div><div class="times"><i>Coming 2028</i></div>'
             rows += [blank_row] * (5 - len(rows))
@@ -284,6 +291,12 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="If the Python Webbrowser library should be used to refresh the page",
+    )
+    parser.add_argument(
+        "--deploy",
+        action="store_true",
+        default=False,
+        help="If systemctl commands should be allowed to run",
     )
     args = parser.parse_args()
     main(args)

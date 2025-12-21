@@ -60,8 +60,9 @@ html, body {
 }
 
 .metro-logo {
-  width: 10cqh;
-  margin-right: 4cqh;
+  height: 10cqh;
+  margin-left: 2cqh;
+  margin-right: 3cqh;
   filter: invert(100%);
 }
 
@@ -82,7 +83,7 @@ html, body {
   border-radius: 50%;
   font-size: 5.5cqh;
   font-weight: bold;
-  margin-right: 4cqh;
+  margin-right: 5cqh;
   display: flex;
   align-items: center;
 	justify-content: center;
