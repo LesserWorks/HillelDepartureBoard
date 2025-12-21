@@ -52,18 +52,11 @@ html, body {
 }
 
 .marc-logo {
-  width: 90%;
+  width: 93%;
 }
 
 .purple-line-logo {
-  width: 80%;
-}
-
-.metro-logo {
-  height: 10cqh;
-  margin-left: 2cqh;
-  margin-right: 3cqh;
-  filter: invert(100%);
+  width: 90%;
 }
 
 .image-backer {
@@ -71,10 +64,17 @@ html, body {
   justify-content: center;
   align-items: center;
   background-color: white;
-  width: 25cqh;
+  width: 21cqh;
   height: 10cqh;
   border-radius: 10% / 25%;
-  margin-right: 3cqh;
+  margin-right: 4cqh;
+}
+
+.metro-logo {
+  height: 10cqh;
+  margin-left: 0cqh;
+  margin-right: 3.2cqh;
+  filter: invert(100%);
 }
 
 .metro-bullet {
@@ -83,7 +83,7 @@ html, body {
   border-radius: 50%;
   font-size: 5.5cqh;
   font-weight: bold;
-  margin-right: 5cqh;
+  margin-right: 4cqh;
   display: flex;
   align-items: center;
 	justify-content: center;
