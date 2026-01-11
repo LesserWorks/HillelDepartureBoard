@@ -59,7 +59,7 @@ marc_name_map = {
     "11940": "Martinsburg",
     "11979": "Martin Airport",
     "12003": "Martin Airport",
-    "11976": "Perryville"
+    "11976": "Perryville",
 }
 
 
@@ -162,10 +162,14 @@ def get_metro_rows(realtime):
         else:
             by_dest[key] = [(int(entry["Min"]), entry["Line"])]
     rows = []
+    if not by_dest:
+        rows.append(
+            '<div class="service-name"><img src="images/WMATA_Metro_Logo.svg" class="metro-logo">None found</div>'
+        )
     for key, val in by_dest.items():
         times_str = [x[0] for x in val]
         rows.append(
-            f'<div class="service-name"><img src="images/WMATA_Metro_Logo.svg" class="metro-logo"><div class="metro-bullet {val[0][1]}">{val[0][1]}</div>{key}</div><div class="times">{str(times_str[:2])[1:-1]}</div>'
+            f'<div class="service-name"><div class="clear-backer"><img src="images/WMATA_Metro_Logo.svg" class="metro-logo"><div class="metro-bullet {val[0][1]}">{val[0][1]}</div></div>{key}</div><div class="times">{str(times_str[:2])[1:-1]}</div>'
         )
     return rows
 
@@ -231,7 +235,7 @@ def main(args):
                         minutes_str += f"<b><i>{minutes}</i></b>, "
                     max_times -= 1
                 marc_rows.append(
-                    f'<div class="service-name"><div class="image-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div>{dest_name}</div><div class="times">{minutes_str[:-2]}</div>'
+                    f'<div class="service-name"><div class="white-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div>{dest_name}</div><div class="times">{minutes_str[:-2]}</div>'
                 )
 
             if not marc_rows:  # no trains are coming within the next 99 minutes
@@ -242,7 +246,7 @@ def main(args):
                     # time_str = next_marc_time.strftime("%A, %b %-d at %-I:%M %p")
                     time_str = next_marc_time.strftime("%A at %-I:%M %p")
                     marc_rows.append(
-                        f'<div class="service-name"><div class="image-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div></div><div class="times"><i>Resumes {time_str}</i></div>'
+                        f'<div class="service-name"><div class="white-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div></div><div class="times"><i>Resumes {time_str}</i></div>'
                     )
 
             # Purple line always gets bottom row
@@ -251,7 +255,7 @@ def main(args):
             # Blank lines for the rest
             rows = metro_rows[: (5 - len(marc_rows[:3]))] + marc_rows[:3]
             blank_row = '<div class="service-name"></div>'
-            purple_row = '<div class="service-name"><div class="image-backer"><img src="images/MTA_Purple_Line_logo.svg.png" class="purple-line-logo"></div></div><div class="times"><i>Coming 2028</i></div>'
+            purple_row = '<div class="service-name"><div class="white-backer"><img src="images/MTA_Purple_Line_logo.svg.png" class="purple-line-logo"></div></div><div class="times"><i>Coming 2028</i></div>'
             rows += [blank_row] * (5 - len(rows))
             rows.append(purple_row)
             write_rows(rows)

@@ -41,6 +41,7 @@ stop_times.txt also had the trip simply not going past hyattsville at all.
 Seemingly becuase metro says their static GTFS is updated daily.
 However stop_times.txt and trips.txt still had the trips with included the closed stations still there.
 
+Seems that DestinationName for New Carrollton changes from N Carrollton to NewCrlton between K04 and K03 (Ballston, Virginia Sq)
 Exit fullscreen with Alt-F4
 
 Todo:

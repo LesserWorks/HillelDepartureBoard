@@ -29,7 +29,7 @@ html, body {
 }
 
 .list-row {
-	font-size: 36px;
+	font-size: 50px;
 	color: white;
 	padding: 1.5%;
 	
@@ -59,7 +59,7 @@ html, body {
   width: 90%;
 }
 
-.image-backer {
+.white-backer {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -70,9 +70,16 @@ html, body {
   margin-right: 4cqh;
 }
 
+.clear-backer {
+  display: flex;
+  align-items: center;
+  width: 21cqh;
+  height: 10cqh;
+  margin-right: 4cqh;
+}
+
 .metro-logo {
   height: 10cqh;
-  margin-left: 0cqh;
   margin-right: 3.2cqh;
   filter: invert(100%);
 }
@@ -83,7 +90,6 @@ html, body {
   border-radius: 50%;
   font-size: 5.5cqh;
   font-weight: bold;
-  margin-right: 4cqh;
   display: flex;
   align-items: center;
 	justify-content: center;
