@@ -204,14 +204,16 @@ def combine_realtime_with_sched(realtime, stop_ids, gtfs_info, gtfs_sched):
                                     )
     ordered_arr = []
     for dest_id, times in sched.items():
-        # remove times that are not within 1-99 minutes away
+        # Remove times that are not within 1-99 minutes away
+        # Note that -(x // -60) does ceiling division,
+        # so trains that are less than a minute away round up to 1
         filtered_times = [
             {
-                "arrival_time": int((x["arrival_time"] - dt).total_seconds() / 60),
+                "arrival_time": int(-((x["arrival_time"] - dt).total_seconds() // -60)),
                 "realtime": x["realtime"],
             }
             for x in times
-            if 0 < int((x["arrival_time"] - dt).total_seconds() / 60) < 100
+            if 0 < int(-((x["arrival_time"] - dt).total_seconds() // -60)) < 100
         ]
         if filtered_times:  # not empty
             # sort destinations by which is arriving first

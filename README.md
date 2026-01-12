@@ -5,11 +5,7 @@ The service unit file is at /lib/systemd/system/kiosk.service.
 
 In the evening, crontab stops the service, turns off the screen, and does git pull.
 
-To do:
 
-Replace metro feed with GTFS feed
-
-Change background image on Pi
 
 During track work but not shutdown on silver line, saw this
 stop id PF_N12_C sched 0 time 1969-12-31 19:00:00
@@ -38,18 +34,11 @@ The text for sched 1 was SKIPPED. When I watched the train live, it continued to
 For Green line trains during the shutdown of CP and Greenbelt, the stop time updates simply didn't include CP and Greenbelt at all and all the sched relation was normal.
 In the trips.txt, there were a bunch of trips with Hyatsville Crossing as the headsign
 stop_times.txt also had the trip simply not going past hyattsville at all.
-Seemingly becuase metro says their static GTFS is updated daily.
+Seemingly because metro says their static GTFS is updated daily.
 However stop_times.txt and trips.txt still had the trips with included the closed stations still there.
 
 Seems that DestinationName for New Carrollton changes from N Carrollton to NewCrlton between K04 and K03 (Ballston, Virginia Sq)
 Exit fullscreen with Alt-F4
 
-Todo:
-Seems that requester() try catch doesn't always catch domain name resolution failures?
-Try sudo systemctl restart NetworkManager
-It worked in a test python scripts with subprocess sudo systemctl restart networkmamager
-Worked when done manually
-Change desktop image to a less different one
-Purple Line row is cut off just a hair if there are 4 Metro rows and one marc
 Check if marc is correct for origin station cause I didn't see it switch to realtime after scheduled went to 1 min
 - Yead it appears the realtime marc doesn't include the origin station unit it's departed

@@ -224,7 +224,7 @@ def main(args):
                     else marc_info["stops"][entry["dest_id"]]["stop_name"]
                 )
                 minutes_str = ""
-                max_times = 2
+                max_times = 2  # how many trains to the same destination we'll include
                 for time in entry["times"]:
                     if max_times <= 0:
                         break
