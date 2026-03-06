@@ -3,7 +3,9 @@
 from pathlib import Path
 from datetime import datetime
 from threading import Event
+from difflib import get_close_matches
 from gtfs_helpers import *
+from station_names import *
 import shutil
 import signal
 import subprocess
@@ -45,22 +47,6 @@ new_carrollton_sb_id = 11988
 penn_nd_id = 12002
 penn_sb_id = 11980
 washington_marc = 11958
-marc_name_map = {
-    "11958": "Washington",
-    "12006": "Baltimore Camden",
-    "12008": "Dorsey",
-    "12025": "Dorsey",
-    "11980": "Baltimore Penn",
-    "12002": "Baltimore Penn",
-    "11972": "Frederick",
-    "11944": "Frederick",
-    "11973": "Brunswick",
-    "11943": "Brunswick",
-    "11940": "Martinsburg",
-    "11979": "Martin Airport",
-    "12003": "Martin Airport",
-    "11976": "Perryville",
-}
 
 
 exit_event = Event()
@@ -152,9 +138,14 @@ def get_metro_rows(realtime):
             and entry["Min"] not in ["ARR", "BRD", "DLY", ""]
         ):
             filtered.append(entry)
+    print(filtered)
     by_dest = {}
     for entry in filtered:
-        key = entry["DestinationName"]
+        translated_name = get_close_matches(entry["DestinationName"], wmata_name_list, n=1, cutoff=0.1)
+        if translated_name:
+            key = translated_name[0]
+        else:
+            key = entry["DestinationName"]
         if key in by_dest:
             bisect.insort_right(
                 by_dest[key], (int(entry["Min"]), entry["Line"]), key=(lambda x: x[0])
