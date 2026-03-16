@@ -57,31 +57,32 @@ def get_gtfs_schedule(gtfs_info, stop_ids):
     platform_pair = stop_ids.split("-")  # also works for a single center platform
     gtfs_sched = {}
     for trip_id, info_list in gtfs_info["stop_times"].items():
-        service_id = gtfs_info["trips"][trip_id]["service_id"]
-        for info in info_list:
-            if info["stop_id"] in platform_pair:
-                last_stop = info_list[-1]["stop_id"]
-                if last_stop not in platform_pair and last_stop in gtfs_sched:
-                    bisect.insort_right(
-                        gtfs_sched[last_stop],
-                        {
-                            "arrival_time": info["arrival_time"],
-                            "trip_id": trip_id,
-                            "service_id": service_id,
-                            "realtime": False,
-                        },
-                        key=(lambda x: x["arrival_time"]),
-                    )
-                elif last_stop not in platform_pair:
-                    gtfs_sched[last_stop] = [
-                        {
-                            "arrival_time": info["arrival_time"],
-                            "trip_id": trip_id,
-                            "service_id": service_id,
-                            "realtime": False,
-                        }
-                    ]
-                break  # to next trip_id
+        if trip_id in gtfs_info["trips"]:
+            service_id = gtfs_info["trips"][trip_id]["service_id"]
+            for info in info_list:
+                if info["stop_id"] in platform_pair:
+                    last_stop = info_list[-1]["stop_id"]
+                    if last_stop not in platform_pair and last_stop in gtfs_sched:
+                        bisect.insort_right(
+                            gtfs_sched[last_stop],
+                            {
+                                "arrival_time": info["arrival_time"],
+                                "trip_id": trip_id,
+                                "service_id": service_id,
+                                "realtime": False,
+                            },
+                            key=(lambda x: x["arrival_time"]),
+                        )
+                    elif last_stop not in platform_pair:
+                        gtfs_sched[last_stop] = [
+                            {
+                                "arrival_time": info["arrival_time"],
+                                "trip_id": trip_id,
+                                "service_id": service_id,
+                                "realtime": False,
+                            }
+                        ]
+                    break  # to next trip_id
     return gtfs_sched
 
 

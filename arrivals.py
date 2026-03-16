@@ -138,7 +138,6 @@ def get_metro_rows(realtime):
             and entry["Min"] not in ["ARR", "BRD", "DLY", ""]
         ):
             filtered.append(entry)
-    print(filtered)
     by_dest = {}
     for entry in filtered:
         translated_name = get_close_matches(entry["DestinationName"], wmata_name_list, n=1, cutoff=0.1)
