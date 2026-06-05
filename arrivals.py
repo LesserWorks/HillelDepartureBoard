@@ -121,6 +121,14 @@ def decrypt_metro_api():
     return key
 
 
+def translate_station_name(name):
+    translated_name = get_close_matches(name, wmata_name_map.keys(), n=1, cutoff=0.6)
+    if translated_name:
+        return wmata_name_map[translated_name[0]]
+    else:
+        return name
+
+
 def get_metro_rows(realtime):
     if realtime is None:
         return [
@@ -140,11 +148,7 @@ def get_metro_rows(realtime):
             filtered.append(entry)
     by_dest = {}
     for entry in filtered:
-        translated_name = get_close_matches(entry["DestinationName"], wmata_name_list, n=1, cutoff=0.1)
-        if translated_name:
-            key = translated_name[0]
-        else:
-            key = entry["DestinationName"]
+        key = translate_station_name(entry["DestinationName"])
         if key in by_dest:
             bisect.insort_right(
                 by_dest[key], (int(entry["Min"]), entry["Line"]), key=(lambda x: x[0])
@@ -245,7 +249,7 @@ def main(args):
             # Blank lines for the rest
             rows = metro_rows[: (5 - len(marc_rows[:3]))] + marc_rows[:3]
             blank_row = '<div class="service-name"></div>'
-            purple_row = '<div class="service-name"><div class="white-backer"><img src="images/MTA_Purple_Line_logo.svg.png" class="purple-line-logo"></div></div><div class="times"><i>Coming 2028</i></div>'
+            purple_row = '<div class="service-name"><div class="white-backer"><img src="images/MTA_Purple_Line_logo.svg.png" class="purple-line-logo"></div></div><div class="times"><i>Coming late 2027</i></div>'
             rows += [blank_row] * (5 - len(rows))
             rows.append(purple_row)
             write_rows(rows)
