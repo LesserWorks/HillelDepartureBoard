@@ -249,7 +249,7 @@ def main(args):
             # Blank lines for the rest
             rows = metro_rows[: (5 - len(marc_rows[:3]))] + marc_rows[:3]
             blank_row = '<div class="service-name"></div>'
-            purple_row = '<div class="service-name"><div class="white-backer"><img src="images/MTA_Purple_Line_logo.svg.png" class="purple-line-logo"></div></div><div class="times"><i>Coming late 2027</i></div>'
+            purple_row = '<div class="service-name"><div class="white-backer"><img src="images/MTA_Purple_Line_logo.svg.png" class="purple-line-logo"></div></div><div class="times"><i>Late 2027</i></div>'
             rows += [blank_row] * (5 - len(rows))
             rows.append(purple_row)
             write_rows(rows)
