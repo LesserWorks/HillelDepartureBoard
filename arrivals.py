@@ -233,14 +233,16 @@ def main(args):
                 )
 
             if not marc_rows:  # no trains are coming within the next 99 minutes
-                next_marc_time = get_next_scheduled(
-                    marc_info, marc_sched, datetime.today()
-                )
+                now = datetime.today()
+                next_marc_time = get_next_scheduled(marc_info, marc_sched, now)
                 if next_marc_time:
                     # time_str = next_marc_time.strftime("%A, %b %-d at %-I:%M %p")
-                    time_str = next_marc_time.strftime("%A at %-I:%M %p")
+                    if next_marc_time.day != now.day:
+                        time_str = next_marc_time.strftime("Resumes %A")
+                    else:
+                        time_str = next_marc_time.strftime("Resumes %-I:%M %p")
                     marc_rows.append(
-                        f'<div class="service-name"><div class="white-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div></div><div class="times"><i>Resumes {time_str}</i></div>'
+                        f'<div class="service-name"><div class="white-backer"><img src="images/MARC_train.svg.png" class="marc-logo"></div></div><div class="times"><i>{time_str}</i></div>'
                     )
 
             # Purple line always gets bottom row
