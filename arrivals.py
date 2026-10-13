@@ -14,6 +14,7 @@ import traceback
 import requests
 import argparse
 import bisect
+import json
 
 """
 static GTFS:
@@ -99,7 +100,8 @@ def download_unpack_zip(url, local_path):
             temp_path.unlink()
 
 
-def decrypt_metro_api():
+def decrypt_api_file() -> dict:
+    # To encrypt the file, do openssl enc -aes-256-cbc -salt -pbkdf2 -iter 100000 -in original_keys.json -out api_keys.enc -pass file:file_key.key
     subprocess.run(
         [
             "openssl",
@@ -108,16 +110,16 @@ def decrypt_metro_api():
             "-d",
             "-pbkdf2",
             "-in",
-            "metro_api.enc",
+            "api_keys.enc",
             "-out",
-            "metro_api.key",
+            "apis_keys.json",
             "-pass",
             "file:file_key.key",
         ],
         check=True,
     )
-    with open("metro_api.key", "r") as infile:
-        key = infile.readline().rstrip()
+    with open("api_keys.json", "r") as infile:
+        key = json.load(infile)
     return key
 
 
@@ -179,36 +181,32 @@ def write_rows(rows):
 
 def main(args):
     marc_path = "./mdotmta_gtfs_marc"
-    metro_path = "./metro_gtfs"
-    if args.marc_code:
-        marc_static_gtfs_url = "https://feeds.mta.maryland.gov/gtfs/marc"
+    marc_static_gtfs_url = "https://feeds.mta.maryland.gov/gtfs/marc"
+    shuttle_um_path = "./shuttle_um_gtfs"
+    shuttle_um_static_gtfs_url = "https://feed.actionfigure.ai/university-of-maryland-shuttle-um.zip"
+    api_keys = decrypt_api_file()
+    
+    if args.shuttle_um:
+        download_unpack_zip(shuttle_um_static_gtfs_url, shuttle_um_path)
+    if args.marc:
         download_unpack_zip(marc_static_gtfs_url, marc_path)
         marc_info = read_gtfs_files(marc_path)
-        marc_sched = get_gtfs_schedule(marc_info, args.marc_code)
-
-    if args.metro_code:
-        metro_key = decrypt_metro_api()
-        # metro_static_gtfs_url = (
-        #     f"https://api.wmata.com/gtfs/rail-gtfs-static.zip?api_key={metro_key}"
-        # )
-        # download_unpack_zip(metro_static_gtfs_url, metro_path)
-        # metro_info = read_gtfs_files(metro_path)
-        # metro_sched = get_gtfs_schedule(metro_info, args.marc_code)
+        marc_sched = get_gtfs_schedule(marc_info, args.marc)
 
     while not exit_event.is_set():
         metro_resp = None
         marc_resp = None
-        if args.metro_code:
-            url = f"http://api.wmata.com/StationPrediction.svc/json/GetPrediction/{args.metro_code}?api_key={metro_key}"
+        if args.metro:
+            url = f"http://api.wmata.com/StationPrediction.svc/json/GetPrediction/{args.metro}?api_key={api_keys['metro']}"
             metro_resp = requester(url, "get", args.deploy)
-        if args.marc_code:
+        if args.marc:
             url = "https://mdotmta-gtfs-rt.s3.amazonaws.com/MARC+RT/marc-tu.pb"
             marc_resp = requester(url, "get", args.deploy)
 
         try:
             metro_rows = get_metro_rows(metro_resp)
             marc_arr = combine_realtime_with_sched(
-                marc_resp, args.marc_code, marc_info, marc_sched
+                marc_resp, args.marc, marc_info, marc_sched
             )
             marc_rows = []
             for entry in marc_arr:
@@ -236,7 +234,6 @@ def main(args):
                 now = datetime.today()
                 next_marc_time = get_next_scheduled(marc_info, marc_sched, now)
                 if next_marc_time:
-                    # time_str = next_marc_time.strftime("%A, %b %-d at %-I:%M %p")
                     if next_marc_time.day != now.day:
                         time_str = next_marc_time.strftime("Resumes %A")
                     else:
@@ -272,13 +269,19 @@ if __name__ == "__main__":
     signal.signal(signal.SIGHUP, exit_handler)
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--marc_code",
-        type=str,
-        default=None,
-        help="MARC station code pair, e.g. 11989-11988",
+        "--marc",
+        nargs='*',
+        type=int,
+        help="MARC station codes, e.g. --marc 11989 11988",
     )
     parser.add_argument(
-        "--metro_code", type=str, default=None, help="Metro station code (CP is E09)"
+        "--metro", type=str, default=None, help="Metro station code (CP is E09)"
+    )
+    parser.add_argument(
+        "--shuttle-um",
+        nargs='*',
+        type=int,
+        help="Shuttle-UM station codes, e.g. --shuttle-um 11989 11988",
     )
     parser.add_argument(
         "--refresh",

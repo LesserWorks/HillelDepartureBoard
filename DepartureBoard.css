@@ -11,16 +11,39 @@ html, body {
 	background: #2c3647
 }
 
-.board {
+.outer {
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+}
+
+.rail {
 	height: 100%;
 	display: flex;
 	flex-direction: column;
+  width: 75vw
+}
+
+.bar {
+	height: 100%;
+	display: flex;
+	background-color: rgb(185 158 125);
+  width: 5vw
+}
+
+.bus {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+  width: 20vw
 }
 
 .top-row {
 	font-size: 36px;
 	color: white;
-	padding: 1%;
+	padding-left: 1vw;
+  padding-right: 1vw;
+  height: 6.6%;
 	display: flex;
 	flex-direction: row;
 	justify-content: space-between;
@@ -31,10 +54,11 @@ html, body {
 .list-row {
 	font-size: 50px;
 	color: white;
-	padding: 1.5%;
+	padding-left: 1vw;
+  padding-right: 1vw;
+  height: 15.5%;
 	
 	display: flex;
-	flex: 1;
 	flex-direction: row;
 	justify-content: space-between;
 	align-items: center;
@@ -76,6 +100,15 @@ html, body {
   width: 21cqh;
   height: 10cqh;
   margin-right: 4cqh;
+}
+
+.rt { /* Realtime minutes */
+  color: rgb(45, 255, 52)
+}
+
+.sc { /* Scheduled minutes */
+  font-style: italic;
+  color: white;
 }
 
 .metro-logo {

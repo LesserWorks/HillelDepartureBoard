@@ -1,9 +1,11 @@
 .DS_Store
 DepartureBoard.html
 mdotmta_gtfs_marc/
+shuttle_um_gtfs/
 metro_gtfs/
 venv/
 __pycache__
 *.zip
+*.json
 *.key
 *pid.txt

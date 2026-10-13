@@ -53,8 +53,8 @@ def read_gtfs_files(folder_path):
     return gtfs_info
 
 
-def get_gtfs_schedule(gtfs_info, stop_ids):
-    platform_pair = stop_ids.split("-")  # also works for a single center platform
+def get_gtfs_schedule(gtfs_info, stop_ids: list[int]):
+    platform_pair = [str(id) for id in stop_ids]  # also works for a single center platform
     gtfs_sched = {}
     for trip_id, info_list in gtfs_info["stop_times"].items():
         if trip_id in gtfs_info["trips"]:
@@ -91,6 +91,7 @@ def service_is_running(gtfs_info, service_id, dt: datetime.date):
     for entry in gtfs_info["calendar_dates"].get(service_id, []):
         # if found in calendar_dates, overrides other info
         if entry["date"] == str_dt:
+            # 1 means service added, 2 is service removed
             return entry["exception_type"] == "1"
     # if date wasn't in this service_id's calendar dates, check regular calendar list
     else:
@@ -142,10 +143,10 @@ def get_sched_for_day(gtfs_info, gtfs_sched, dt: datetime.date):
     return ret
 
 
-def combine_realtime_with_sched(realtime, stop_ids, gtfs_info, gtfs_sched):
+def combine_realtime_with_sched(realtime, stop_ids: list[int], gtfs_info, gtfs_sched):
     if not stop_ids:
         return []
-    platform_pair = stop_ids.split("-")  # also works for a single center platform
+    platform_pair = [str(id) for id in stop_ids]  # also works for a single center platform
     dt = datetime.today()
     sched = get_sched_for_day(gtfs_info, gtfs_sched, dt.date())
     feed = gtfs_realtime_pb2.FeedMessage()
