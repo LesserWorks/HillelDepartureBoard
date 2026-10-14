@@ -5,6 +5,16 @@ The service unit file is at /lib/systemd/system/kiosk.service.
 
 In the evening, crontab stops the service, turns off the screen, and does git pull.
 
+Helpful station codes:
+wmata_college_park_id = "PF_E09_C"
+college_park_nb_id = 12018
+college_park_sb_id = 12015
+new_carrollton_nb_id = 11989
+new_carrollton_sb_id = 11988
+penn_nd_id = 12002
+penn_sb_id = 11980
+washington_marc = 11958
+
 
 
 During track work but not shutdown on silver line, saw this

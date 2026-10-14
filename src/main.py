@@ -6,15 +6,18 @@ from threading import Event
 from difflib import get_close_matches
 from gtfs_helpers import *
 from station_names import *
+from metro import get_metro_rows
 import shutil
 import signal
 import subprocess
 import webbrowser
 import traceback
 import requests
+from requests import Response
 import argparse
 import bisect
 import json
+from typing import Optional
 
 """
 static GTFS:
@@ -40,14 +43,6 @@ Upon screen update:
 5. Append to realtime array
 
 """
-wmata_college_park_id = "PF_E09_C"
-college_park_nb_id = 12018
-college_park_sb_id = 12015
-new_carrollton_nb_id = 11989
-new_carrollton_sb_id = 11988
-penn_nd_id = 12002
-penn_sb_id = 11980
-washington_marc = 11958
 
 
 exit_event = Event()
@@ -57,7 +52,7 @@ def exit_handler(signal, frame):
     exit_event.set()
 
 
-def requester(url, method, allow_restart):
+def requester(url: str, method: str, allow_restart: bool) -> Optional[Response]:
     try:
         if method == "get":
             return requests.get(url, allow_redirects=True, timeout=3)
@@ -77,7 +72,7 @@ def requester(url, method, allow_restart):
     return None
 
 
-def download_unpack_zip(url, local_path):
+def download_unpack_zip(url: str, local_path: Path) -> None:
     # default to only downloading the GTFS zip file between daily board startup time and 8 am
     gtfs_modified = datetime.today().replace(hour=8).timestamp()
     resp = requester(url, "head", False)
@@ -88,8 +83,8 @@ def download_unpack_zip(url, local_path):
             last_modified, "%a, %d %b %Y %H:%M:%S %Z"
         ).timestamp()
     if (
-        not Path(local_path).exists()
-        or Path(local_path).stat().st_mtime < gtfs_modified
+        not local_path.exists()
+        or local_path.stat().st_mtime < gtfs_modified
     ):
         resp = requester(url, "get", False)
         if resp:
@@ -102,72 +97,10 @@ def download_unpack_zip(url, local_path):
 
 def decrypt_api_file() -> dict:
     # To encrypt the file, do openssl enc -aes-256-cbc -salt -pbkdf2 -iter 100000 -in original_keys.json -out api_keys.enc -pass file:file_key.key
-    subprocess.run(
-        [
-            "openssl",
-            "enc",
-            "-aes-256-cbc",
-            "-d",
-            "-pbkdf2",
-            "-in",
-            "api_keys.enc",
-            "-out",
-            "apis_keys.json",
-            "-pass",
-            "file:file_key.key",
-        ],
-        check=True,
-    )
+    subprocess.run(["openssl", "enc", "-aes-256-cbc", "-d", "-pbkdf2", "-in", "api_keys.enc", "-out", "apis_keys.json", "-pass", "file:file_key.key"], check=True)
     with open("api_keys.json", "r") as infile:
-        key = json.load(infile)
-    return key
-
-
-def translate_station_name(name):
-    translated_name = get_close_matches(name, wmata_name_map.keys(), n=1, cutoff=0.6)
-    if translated_name:
-        return wmata_name_map[translated_name[0]]
-    else:
-        return name
-
-
-def get_metro_rows(realtime):
-    if realtime is None:
-        return [
-            '<div class="service-name"><img src="images/WMATA_Metro_Logo.svg" class="metro-logo">Network error</div>'
-        ]
-    data = realtime.json()
-    filtered = []
-    if "Trains" not in data:
-        return []
-    for entry in data.get("Trains", []):
-        if (
-            "Min" in entry
-            and "DestinationName" in entry
-            and entry["DestinationName"] not in ["No Passenger", "Train"]
-            and entry["Min"] not in ["ARR", "BRD", "DLY", ""]
-        ):
-            filtered.append(entry)
-    by_dest = {}
-    for entry in filtered:
-        key = translate_station_name(entry["DestinationName"])
-        if key in by_dest:
-            bisect.insort_right(
-                by_dest[key], (int(entry["Min"]), entry["Line"]), key=(lambda x: x[0])
-            )
-        else:
-            by_dest[key] = [(int(entry["Min"]), entry["Line"])]
-    rows = []
-    if not by_dest:
-        rows.append(
-            '<div class="service-name"><img src="images/WMATA_Metro_Logo.svg" class="metro-logo">None found</div>'
-        )
-    for key, val in by_dest.items():
-        times_str = [x[0] for x in val]
-        rows.append(
-            f'<div class="service-name"><div class="clear-backer"><img src="images/WMATA_Metro_Logo.svg" class="metro-logo"><div class="metro-bullet {val[0][1]}">{val[0][1]}</div></div>{key}</div><div class="times">{str(times_str[:2])[1:-1]}</div>'
-        )
-    return rows
+        key_file = json.load(infile)
+    return key_file
 
 
 def write_rows(rows):
@@ -180,9 +113,9 @@ def write_rows(rows):
 
 
 def main(args):
-    marc_path = "./mdotmta_gtfs_marc"
+    marc_path = Path("./mdotmta_gtfs_marc")
     marc_static_gtfs_url = "https://feeds.mta.maryland.gov/gtfs/marc"
-    shuttle_um_path = "./shuttle_um_gtfs"
+    shuttle_um_path = Path("./shuttle_um_gtfs")
     shuttle_um_static_gtfs_url = "https://feed.actionfigure.ai/university-of-maryland-shuttle-um.zip"
     api_keys = decrypt_api_file()
     

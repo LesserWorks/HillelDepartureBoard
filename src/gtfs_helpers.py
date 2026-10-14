@@ -17,18 +17,20 @@ schedule_relationship = [
 ]
 
 
-def read_gtfs_files(folder_path):
+def read_gtfs_files(folder_path: Path) -> dict:
+    """Parse static GTFS files into a dict"""
     gtfs_info = {}
-    for file in Path(folder_path).iterdir():
+    for file in folder_path.iterdir():
         gtfs_info[file.stem] = {}
         # key is unique in these files
         if file.stem in {"routes", "stops", "trips"}:
+            # for 'routes', use 'route_id' as the key, etc
+            id_name = file.stem[:-1] + "_id"
             with open(file) as infile:
                 reader = csv.DictReader(infile)
                 for row in reader:
-                    # for 'routes', use 'route_id' as the key, etc
-                    key = row[file.stem[:-1] + "_id"]
-                    gtfs_info[file.stem][key] = row
+                    key = row[id_name] # get the particular route_id, stop_id, etc
+                    gtfs_info[file.stem][key] = row # save whole row
         # service_id is unique in this file, get list of days of week it's active
         elif file.stem == "calendar":
             with open(file) as infile:
