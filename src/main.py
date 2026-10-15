@@ -123,8 +123,8 @@ def main(args):
         download_unpack_zip(shuttle_um_static_gtfs_url, shuttle_um_path)
     if args.marc:
         download_unpack_zip(marc_static_gtfs_url, marc_path)
-        marc_info = read_gtfs_files(marc_path)
-        marc_sched = get_gtfs_schedule(marc_info, args.marc)
+        marc_gtfs = read_gtfs_files(marc_path)
+        marc_sched = get_gtfs_schedule(marc_gtfs, args.marc)
 
     while not exit_event.is_set():
         metro_resp = None
@@ -181,7 +181,6 @@ def main(args):
             # Blank lines for the rest
             rows = metro_rows[: (5 - len(marc_rows[:3]))] + marc_rows[:3]
             blank_row = '<div class="service-name"></div>'
-            purple_row = '<div class="service-name"><div class="white-backer"><img src="images/MTA_Purple_Line_logo.svg.png" class="purple-line-logo"></div></div><div class="times"><i>Late 2027</i></div>'
             rows += [blank_row] * (5 - len(rows))
             rows.append(purple_row)
             write_rows(rows)
