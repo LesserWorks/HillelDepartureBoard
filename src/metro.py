@@ -4,7 +4,7 @@ import bisect
 from typing import Optional
 from difflib import get_close_matches
 from requests import Response
-from station_names import wmata_name_map
+from .station_names import wmata_name_map
 
 
 def translate_station_name(name: str) -> str:

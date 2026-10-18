@@ -14,6 +14,7 @@ new_carrollton_sb_id = 11988
 penn_nd_id = 12002
 penn_sb_id = 11980
 washington_marc = 11958
+Baltimore & Knox = 2714
 
 
 
@@ -52,6 +53,7 @@ Exit fullscreen with Alt-F4
 
 Check if marc is correct for origin station cause I didn't see it switch to realtime after scheduled went to 1 min
 - Yeah it appears the realtime marc doesn't include the origin station unit it's departed
+- However Shuttle-UM seems to start including realtime info long before trip departs. Transit app marks many of these as scheduled despite the realtime info starting. Maybe look into if vehicle positions has to do with it.
 
 trips.txt:      trip_id,            route_id,service_id,trip_headsign,trip_short_name
 For MARC:       Train400,           11705,   101P,      BALTIMORE,    Train 400

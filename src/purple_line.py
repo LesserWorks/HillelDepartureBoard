@@ -1,5 +1,6 @@
 """Stub to return the single Purple Line row"""
 
+
 def get_purple_line_rows() -> list[str]:
     """Return stub line for Purple Line"""
     return [

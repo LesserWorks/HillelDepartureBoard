@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Many helper functions to parse static GTFS files, 
+"""Many helper functions to parse static GTFS files,
 and combine them with realtime GTFS feed info"""
 from pathlib import Path
 from datetime import datetime, time, timedelta, date
@@ -44,7 +44,9 @@ def read_gtfs_files(folder_path: Path) -> dict[str, dict]:
                 line_reader = csv.reader(infile)
                 for line in line_reader:
                     service_id = line[0]
-                    gtfs_info[file.stem][service_id] = line[1:10]
+                    gtfs_info[file.stem][service_id] = line[
+                        1:
+                    ]  # everything but service ID
         # key is repeated in these files
         elif file.stem in {"calendar_dates", "stop_times"}:
             with open(file, encoding="utf-8") as infile:
@@ -100,10 +102,10 @@ def service_is_running(gtfs_info: dict, service_id: str, dt: date) -> bool:
             return service_entry["exception_type"] == "1"
     # if date wasn't in this service_id's calendar dates, check regular calendar list
     if service_id in gtfs_info.get("calendar", {}):
-        start_date = datetime.strptime(gtfs_info["calendar"][service_id][8], "%Y%m%d")
-        end_date = datetime.strptime(gtfs_info["calendar"][service_id][9], "%Y%m%d")
+        start_date = datetime.strptime(gtfs_info["calendar"][service_id][7], "%Y%m%d")
+        end_date = datetime.strptime(gtfs_info["calendar"][service_id][8], "%Y%m%d")
         return (
-            start_date <= dt <= end_date
+            start_date.date() <= dt <= end_date.date()
             and gtfs_info["calendar"][service_id][dt.weekday()] == "1"
         )
     return True
@@ -131,13 +133,14 @@ def get_sched_for_day(gtfs_info: dict, gtfs_sched: dict, dt: date) -> dict[str, 
     return ret
 
 
+# pylint: disable=too-many-nested-blocks
 def combine_realtime_with_sched(
     realtime: Optional[Response], stop_ids: list[int], today_sched: dict
 ) -> dict[str, dict]:
     """Update the static GTFS schedule copy with realtime information"""
     sched = copy.deepcopy(today_sched)  # copy cause we're going to modify it
     if realtime:
-        feed = gtfs_realtime_pb2.FeedMessage()
+        feed = gtfs_realtime_pb2.FeedMessage()  # pylint: disable=no-member
         feed.ParseFromString(realtime.content)
         # iterate objects in protobuf
         for entity in feed.entity:
@@ -160,12 +163,16 @@ def combine_realtime_with_sched(
                             else sched[trip_id]["last_stop"]
                         )
                         for stu in trip_update.stop_time_update:
-                            if int(stu.stop_id) in stop_ids and stu.HasField(
-                                "departure"
+                            if int(stu.stop_id) in stop_ids and (
+                                stu.HasField("departure") or stu.HasField("arrival")
                             ):
-                                dept_time = datetime.fromtimestamp(stu.departure.time)
+                                used_time = (
+                                    datetime.fromtimestamp(stu.departure.time)
+                                    if stu.HasField("departure")
+                                    else datetime.fromtimestamp(stu.arrival.time)
+                                )
                                 sched[trip_id] = {
-                                    "departure_time": dept_time,
+                                    "departure_time": used_time,
                                     "last_stop": last_stop,
                                     "route_id": sched[trip_id]["route_id"],
                                     "realtime": True,
