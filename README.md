@@ -51,4 +51,12 @@ Seems that DestinationName for New Carrollton changes from N Carrollton to NewCr
 Exit fullscreen with Alt-F4
 
 Check if marc is correct for origin station cause I didn't see it switch to realtime after scheduled went to 1 min
-- Yead it appears the realtime marc doesn't include the origin station unit it's departed
+- Yeah it appears the realtime marc doesn't include the origin station unit it's departed
+
+trips.txt:      trip_id,            route_id,service_id,trip_headsign,trip_short_name
+For MARC:       Train400,           11705,   101P,      BALTIMORE,    Train 400
+For Shuttle-UM: 104_B1_express_2230,104,     FA26B1
+
+routes.txt:     route_id,agency_id,route_short_name,route_long_name
+For MARC:       11704,   30034,    MARC,            BRUNSWICK - WASHINGTON
+For Shuttle-UM: 104,     1653,     104,             College Park Metro Station

@@ -1,3 +1,5 @@
+"""Contains maps from station names or IDs to preferred display string"""
+
 marc_name_map = {
     "11958": "Washington",
     "12006": "Baltimore Camden",
