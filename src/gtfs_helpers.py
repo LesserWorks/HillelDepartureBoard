@@ -177,6 +177,7 @@ def combine_realtime_with_sched(
                                     "route_id": sched[trip_id]["route_id"],
                                     "realtime": True,
                                 }
+                                break  # to next trip_id
     return sched
 
 

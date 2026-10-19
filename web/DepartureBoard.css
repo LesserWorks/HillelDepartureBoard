@@ -28,7 +28,9 @@ html, body {
 	height: 100%;
 	display: flex;
 	background-color: rgb(185 158 125);
-  width: 5vw
+  width: 5vw;
+  box-shadow: 0 0 6px 7px rgb(29, 29, 29);
+  z-index: 1; /* So that the shadow renders on top of the bus column */
 }
 
 .bus {

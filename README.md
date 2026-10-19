@@ -15,8 +15,9 @@ penn_nd_id = 12002
 penn_sb_id = 11980
 washington_marc = 11958
 Baltimore & Knox = 2714
+College & Yale = 2672
 
-
+If the user gives two or more stop IDs that a single trip visits, it will display the times for the stop that the trip reaches earlier.
 
 During track work but not shutdown on silver line, saw this
 stop id PF_N12_C sched 0 time 1969-12-31 19:00:00
@@ -53,12 +54,8 @@ Exit fullscreen with Alt-F4
 
 Check if marc is correct for origin station cause I didn't see it switch to realtime after scheduled went to 1 min
 - Yeah it appears the realtime marc doesn't include the origin station unit it's departed
-- However Shuttle-UM seems to start including realtime info long before trip departs. Transit app marks many of these as scheduled despite the realtime info starting. Maybe look into if vehicle positions has to do with it.
+- However Shuttle-UM seems to start including realtime info long before trip departs. Transit app marks many of these as scheduled despite the realtime info starting. This is apparently deliberate by Swiftly.
 
-trips.txt:      trip_id,            route_id,service_id,trip_headsign,trip_short_name
-For MARC:       Train400,           11705,   101P,      BALTIMORE,    Train 400
-For Shuttle-UM: 104_B1_express_2230,104,     FA26B1
-
-routes.txt:     route_id,agency_id,route_short_name,route_long_name
-For MARC:       11704,   30034,    MARC,            BRUNSWICK - WASHINGTON
-For Shuttle-UM: 104,     1653,     104,             College Park Metro Station
+To do:
+1. Better support for added trips
+2. Better network diagnostics
