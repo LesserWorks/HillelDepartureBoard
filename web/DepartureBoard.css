@@ -21,7 +21,7 @@ html, body {
 	height: 100%;
 	display: flex;
 	flex-direction: column;
-  width: 73vw
+  width: 70vw
 }
 
 .bar {
@@ -37,7 +37,7 @@ html, body {
 	height: 100%;
 	display: flex;
 	flex-direction: column;
-  width: 22vw
+  width: 25vw
 }
 
 .top-row {
