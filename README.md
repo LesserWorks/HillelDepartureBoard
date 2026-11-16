@@ -5,7 +5,19 @@ The service unit file is at /lib/systemd/system/kiosk.service.
 
 In the evening, crontab stops the service, turns off the screen, and does git pull.
 
+Helpful station codes:
+wmata_college_park_id = "PF_E09_C"
+college_park_nb_id = 12018
+college_park_sb_id = 12015
+new_carrollton_nb_id = 11989
+new_carrollton_sb_id = 11988
+penn_nd_id = 12002
+penn_sb_id = 11980
+washington_marc = 11958
+Baltimore & Knox = 2714
+College & Yale = 2672
 
+If the user gives two or more stop IDs that a single trip visits, it will display the times for the stop that the trip reaches earlier.
 
 During track work but not shutdown on silver line, saw this
 stop id PF_N12_C sched 0 time 1969-12-31 19:00:00
@@ -41,4 +53,9 @@ Seems that DestinationName for New Carrollton changes from N Carrollton to NewCr
 Exit fullscreen with Alt-F4
 
 Check if marc is correct for origin station cause I didn't see it switch to realtime after scheduled went to 1 min
-- Yead it appears the realtime marc doesn't include the origin station unit it's departed
+- Yeah it appears the realtime marc doesn't include the origin station unit it's departed
+- However Shuttle-UM seems to start including realtime info long before trip departs. Transit app marks many of these as scheduled despite the realtime info starting. This is apparently deliberate by Swiftly.
+
+To do:
+1. Better support for added trips
+2. Better network diagnostics
